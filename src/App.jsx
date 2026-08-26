@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
-  signInWithCustomToken, 
   signInAnonymously, 
   onAuthStateChanged 
 } from 'firebase/auth';
@@ -14,7 +13,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 
-// --- 15 MASTER PRODUCTS WITH ACCURATE CATALOGUE RATES ---
+// --- 15 MASTER PRODUCTS ---
 const DEFAULT_PRODUCTS = [
   {
     id: "KHU-001",
@@ -333,7 +332,7 @@ const DEFAULT_PRODUCTS = [
   }
 ];
 
-// --- FIREBASE INITIALIZATION ---
+// --- PASTE YOUR FIREBASE KEYS HERE ---
 const firebaseConfig = {
   apiKey: "AIzaSyD3pPGlB37Njyp7IVnV2a0k4ArRNJFZ9JY",
   authDomain: "khushali-a24f0.firebaseapp.com",
@@ -343,15 +342,15 @@ const firebaseConfig = {
   appId: "1:1072051479007:web:47acc32a1cb85e7c4f246a",
   measurementId: "G-QGVJV5V7HS"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = 'khushali-chemicals-v1';
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Connecting to live database...');
+  const [isCloudConnected, setIsCloudConnected] = useState(false);
+  const [cloudError, setCloudError] = useState(null);
 
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [transactions, setTransactions] = useState([]);
@@ -394,42 +393,38 @@ export default function App() {
     setTimeout(() => setNotification(null), 3500);
   };
 
+  // 1. Authenticate immediately
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth init error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
+    signInAnonymously(auth).catch((err) => {
+      console.error("Auth error:", err);
+      setCloudError("Auth Error: " + err.message + " (Make sure Anonymous Auth is ON in Firebase)");
+    });
+
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) {
         setIsCloudConnected(true);
-        setSyncStatus('Live Sync Active');
+        setSyncStatus('🟢 Cloud Live Sync Active');
       }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
+  // 2. Direct Firestore Collection Listeners
   useEffect(() => {
-    if (!user) return;
-
-    const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
-    const transactionsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+    const productsRef = collection(db, 'products');
+    const txRef = collection(db, 'transactions');
 
     const unsubProducts = onSnapshot(
-      productsCollectionRef,
+      productsRef,
       (snapshot) => {
         if (snapshot.empty) {
+          // Initialize in database on first load
           DEFAULT_PRODUCTS.forEach(async (p) => {
-            const pDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
-            await setDoc(pDocRef, p, { merge: true });
+            try {
+              await setDoc(doc(db, 'products', p.id), p, { merge: true });
+            } catch (e) {
+              console.error("Init save error:", e);
+            }
           });
         } else {
           const cloudMap = {};
@@ -452,31 +447,52 @@ export default function App() {
         }
       },
       (error) => {
-        console.error("Product sync error:", error);
-        setSyncStatus('Cloud Sync Reconnecting...');
+        console.error("Firestore product error:", error);
+        setCloudError("Firestore Error: " + error.message + " (Check Database Rules in Firebase)");
+        setSyncStatus('⚠️ Sync Error');
       }
     );
 
-    const unsubTransactions = onSnapshot(
-      transactionsCollectionRef,
+    const unsubTx = onSnapshot(
+      txRef,
       (snapshot) => {
-        const txList = [];
+        const list = [];
         snapshot.forEach(docSnap => {
-          txList.push({ id: docSnap.id, ...docSnap.data() });
+          list.push({ id: docSnap.id, ...docSnap.data() });
         });
-        txList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        setTransactions(txList);
+        list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        setTransactions(list);
       },
       (error) => {
-        console.error("Transaction sync error:", error);
+        console.error("Firestore tx error:", error);
       }
     );
 
     return () => {
       unsubProducts();
-      unsubTransactions();
+      unsubTx();
     };
-  }, [user]);
+  }, []);
+
+  const saveProductToCloud = async (productId, updatedFields) => {
+    try {
+      await setDoc(doc(db, 'products', productId), updatedFields, { merge: true });
+    } catch (err) {
+      console.error("Failed to save product:", err);
+      showToast("Cloud write failed: " + err.message, "error");
+    }
+  };
+
+  const saveTransactionToCloud = async (txData) => {
+    try {
+      await setDoc(doc(db, 'transactions', txData.id), {
+        ...txData,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.error("Failed to save tx:", err);
+    }
+  };
 
   const inventoryStats = useMemo(() => {
     let totalStockKg = 0;
@@ -490,9 +506,7 @@ export default function App() {
       const baseVal = p.pricing ? (p.pricing.tier25 || p.pricing.tier5 || 0) : 0;
       totalStockValuation += stock * baseVal;
       totalPotentialDilutedLitres += stock * (p.dilutionRatio || 1);
-      if (stock === 0) {
-        zeroStockCount++;
-      }
+      if (stock === 0) zeroStockCount++;
     });
 
     return {
@@ -562,30 +576,6 @@ export default function App() {
       availableInStock: (selectedCalcProduct.stockKg || 0) >= concentrateKg
     };
   }, [selectedCalcProduct, calcAmount, calcInputType, calcCostTier]);
-
-  const saveProductToCloud = async (productId, updatedFields) => {
-    if (!user) return;
-    try {
-      const pDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', productId);
-      await setDoc(pDocRef, updatedFields, { merge: true });
-    } catch (err) {
-      console.error("Failed to save to cloud:", err);
-    }
-  };
-
-  const saveTransactionToCloud = async (txData) => {
-    if (!user) return;
-    try {
-      const txDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'transactions', txData.id);
-      await setDoc(txDocRef, {
-        ...txData,
-        authorUid: user.uid,
-        timestamp: Date.now()
-      });
-    } catch (err) {
-      console.error("Failed to save transaction:", err);
-    }
-  };
 
   const handleOpenEditPrice = (product) => {
     setEditPriceModal({ open: true, product: product });
@@ -734,26 +724,28 @@ export default function App() {
   const executeResetAllStock = async () => {
     setProducts(prev => prev.map(p => ({ ...p, stockKg: 0 })));
 
-    if (user) {
-      DEFAULT_PRODUCTS.forEach(async (p) => {
-        const pDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
-        await setDoc(pDocRef, { stockKg: 0 }, { merge: true });
-      });
+    DEFAULT_PRODUCTS.forEach(async (p) => {
+      try {
+        await setDoc(doc(db, 'products', p.id), { stockKg: 0 }, { merge: true });
+      } catch (err) {
+        console.error("Reset error:", err);
+      }
+    });
 
-      const resetTx = {
-        id: "TX-RESET-" + Date.now().toString().slice(-4),
-        date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
-        type: 'STOCK_RESET',
-        productId: 'ALL-15',
-        productName: 'All 15 SKUs Initialized',
-        qty: 0,
-        unit: 'kg',
-        refNumber: 'CLOUD-RESET',
-        party: "User: " + user.uid.slice(0, 6),
-        notes: 'All 15 product inventories reset to 0 kg across all devices'
-      };
-      await saveTransactionToCloud(resetTx);
-    }
+    const resetTx = {
+      id: "TX-RESET-" + Date.now().toString().slice(-4),
+      date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
+      type: 'STOCK_RESET',
+      productId: 'ALL-15',
+      productName: 'All 15 SKUs Initialized',
+      qty: 0,
+      unit: 'kg',
+      refNumber: 'CLOUD-RESET',
+      party: "Admin Device",
+      notes: 'All 15 product inventories reset to 0 kg across all devices'
+    };
+    await saveTransactionToCloud(resetTx);
+
     setConfirmResetModal(false);
     showToast("All 15 product stocks reset to 0 kg on all devices!");
   };
@@ -808,10 +800,10 @@ export default function App() {
 
     return {
       items: itemsDetailed,
-      subtotal: subtotal,
-      totalAmount: totalAmount,
-      estimatedGstPortion: estimatedGstPortion,
-      baseValue: baseValue
+      subtotal,
+      totalAmount,
+      estimatedGstPortion,
+      baseValue
     };
   }, [quoteItems, products]);
 
@@ -887,6 +879,12 @@ export default function App() {
         <div className={"fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md border flex items-center gap-3 transition-all " + (notification.type === 'error' ? 'bg-rose-950/90 border-rose-600 text-rose-200' : 'bg-emerald-950/90 border-emerald-600 text-emerald-200')}>
           <span className="text-xl">{notification.type === 'error' ? '⚠️' : '✅'}</span>
           <p className="text-sm font-medium">{notification.msg}</p>
+        </div>
+      )}
+
+      {cloudError && (
+        <div className="bg-rose-950 border-b border-rose-700 py-2.5 px-4 text-center text-xs text-rose-200 font-semibold">
+          ⚠️ {cloudError}
         </div>
       )}
 
