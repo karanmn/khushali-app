@@ -1,4 +1,3 @@
- ```react
 import React, { useState, useMemo, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -88,7 +87,6 @@ const DEFAULT_PRODUCTS = [
     minThresholdKg: 30,
     colorTheme: "#2563eb",
     colorName: "Deep Ocean Blue",
-    // CORRECTED: Catalogue Rate ₹120 (5kg), ₹110 (25kg), ₹100 (50kg)
     pricing: { tier5: 120, tier25: 110, tier50: 100 },
     ratioLabel: "1:7",
     dilutionRatio: 7,
@@ -131,7 +129,6 @@ const DEFAULT_PRODUCTS = [
     minThresholdKg: 40,
     colorTheme: "#eab308",
     colorName: "Citrus Yellow",
-    // CORRECTED: Catalogue Rate ₹145 (5kg), ₹140 (25kg), ₹135 (50kg)
     pricing: { tier5: 145, tier25: 140, tier50: 135 },
     ratioLabel: "1:40 to 1:60",
     dilutionRatio: 50,
@@ -153,7 +150,6 @@ const DEFAULT_PRODUCTS = [
     minThresholdKg: 40,
     colorTheme: "#fb7185",
     colorName: "Rose Floral",
-    // CORRECTED: Catalogue Rate ₹145 (5kg), ₹140 (25kg), ₹135 (50kg)
     pricing: { tier5: 145, tier25: 140, tier50: 135 },
     ratioLabel: "1:40 to 1:60",
     dilutionRatio: 50,
@@ -339,9 +335,9 @@ const DEFAULT_PRODUCTS = [
 
 // --- FIREBASE INITIALIZATION ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  apiKey: "mock-api-key",
-  authDomain: "mock-domain.firebaseapp.com",
-  projectId: "mock-project"
+  apiKey: "demo-api-key",
+  authDomain: "demo-app.firebaseapp.com",
+  projectId: "demo-app"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -349,12 +345,10 @@ const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'khushali-chemicals-v1';
 
 export default function App() {
-  // Authentication & Cloud Sync State
   const [user, setUser] = useState(null);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Connecting to live database...');
 
-  // Core App State
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [transactions, setTransactions] = useState([]);
   const [activeTab, setActiveTab] = useState('inventory');
@@ -362,18 +356,15 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [notification, setNotification] = useState(null);
 
-  // Modals
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [confirmResetModal, setConfirmResetModal] = useState(false);
 
-  // Price & Details Edit Modal State
   const [editPriceModal, setEditPriceModal] = useState({ open: false, product: null });
   const [editTier5, setEditTier5] = useState('');
   const [editTier25, setEditTier25] = useState('');
   const [editTier50, setEditTier50] = useState('');
   const [editMinThreshold, setEditMinThreshold] = useState('');
 
-  // Inward / Dispatch Modal
   const [quickStockModal, setQuickStockModal] = useState({ open: false, product: null, type: 'INWARD' });
   const [modalQty, setModalQty] = useState('');
   const [modalRef, setModalRef] = useState('');
@@ -381,28 +372,24 @@ export default function App() {
   const [modalPriceTier, setModalPriceTier] = useState('tier25');
   const [modalNotes, setModalNotes] = useState('');
 
-  // Batch Formulation Calculator State
-  const [calcProductId, setCalcProductId] = useState("KHU-004"); // Default Toilet Cleaner
+  const [calcProductId, setCalcProductId] = useState("KHU-004");
   const [calcInputType, setCalcInputType] = useState("CONCENTRATE");
   const [calcAmount, setCalcAmount] = useState(5);
   const [calcCostTier, setCalcCostTier] = useState("tier25");
 
-  // WhatsApp Quotation Maker State
   const [quoteItems, setQuoteItems] = useState([
-    { productId: "KHU-004", packSize: 25, quantityPacks: 1 }, // Toilet Cleaner
-    { productId: "KHU-006", packSize: 25, quantityPacks: 1 }, // Floor Cleaner Lemon
-    { productId: "KHU-001", packSize: 25, quantityPacks: 1 }  // White Phenyl
+    { productId: "KHU-004", packSize: 25, quantityPacks: 1 },
+    { productId: "KHU-006", packSize: 25, quantityPacks: 1 },
+    { productId: "KHU-001", packSize: 25, quantityPacks: 1 }
   ]);
   const [quoteCustomerName, setQuoteCustomerName] = useState("Wholesale Buyer");
   const [quoteCustomerCity, setQuoteCustomerCity] = useState("Jaipur, Rajasthan");
 
-  // Toast Helper
   const showToast = (msg, type = 'success') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3500);
   };
 
-  // 1. AUTH SETUP (Rule 3)
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -420,13 +407,12 @@ export default function App() {
       setUser(currentUser);
       if (currentUser) {
         setIsCloudConnected(true);
-        setSyncStatus('🟢 Cloud Live Sync Active');
+        setSyncStatus('Live Sync Active');
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. REAL-TIME MULTI-DEVICE LISTENER FOR 15 PRODUCTS & TRANSACTIONS
   useEffect(() => {
     if (!user) return;
 
@@ -437,7 +423,6 @@ export default function App() {
       productsCollectionRef,
       (snapshot) => {
         if (snapshot.empty) {
-          // Initialize fresh in database
           DEFAULT_PRODUCTS.forEach(async (p) => {
             const pDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
             await setDoc(pDocRef, p, { merge: true });
@@ -448,14 +433,12 @@ export default function App() {
             cloudMap[docSnap.id] = docSnap.data();
           });
 
-          // Merge cloud data with accurate default configuration
           setProducts(DEFAULT_PRODUCTS.map(def => {
             const remote = cloudMap[def.id];
             if (!remote) return def;
             return {
               ...def,
               ...remote,
-              // Ensure pricing merges safely
               pricing: {
                 ...def.pricing,
                 ...(remote.pricing || {})
@@ -466,7 +449,7 @@ export default function App() {
       },
       (error) => {
         console.error("Product sync error:", error);
-        setSyncStatus('⚠️ Cloud Sync Reconnecting...');
+        setSyncStatus('Cloud Sync Reconnecting...');
       }
     );
 
@@ -491,7 +474,6 @@ export default function App() {
     };
   }, [user]);
 
-  // Inventory Metrics
   const inventoryStats = useMemo(() => {
     let totalStockKg = 0;
     let totalStockValuation = 0;
@@ -501,7 +483,7 @@ export default function App() {
     products.forEach(p => {
       const stock = Number(p.stockKg) || 0;
       totalStockKg += stock;
-      const baseVal = p.pricing?.tier25 || p.pricing?.tier5 || 0;
+      const baseVal = p.pricing ? (p.pricing.tier25 || p.pricing.tier5 || 0) : 0;
       totalStockValuation += stock * baseVal;
       totalPotentialDilutedLitres += stock * (p.dilutionRatio || 1);
       if (stock === 0) {
@@ -518,13 +500,11 @@ export default function App() {
     };
   }, [products]);
 
-  // Categories list
   const categories = useMemo(() => {
     const set = new Set(products.map(p => p.category));
     return ['ALL', ...Array.from(set)];
   }, [products]);
 
-  // Filtered Products
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchCat = selectedCategory === 'ALL' || p.category === selectedCategory;
@@ -535,12 +515,10 @@ export default function App() {
     });
   }, [products, selectedCategory, searchQuery]);
 
-  // Active product for calculator
   const selectedCalcProduct = useMemo(() => {
     return products.find(p => p.id === calcProductId) || products[0];
   }, [products, calcProductId]);
 
-  // Formulation calculation results
   const formulationResult = useMemo(() => {
     if (!selectedCalcProduct || calcAmount <= 0) return null;
 
@@ -559,7 +537,7 @@ export default function App() {
     const saltGrams = concentrateKg * selectedCalcProduct.saltReqGram;
     const boosterGrams = concentrateKg * selectedCalcProduct.boosterReqGram;
 
-    const ratePerKg = selectedCalcProduct.pricing[calcCostTier] || selectedCalcProduct.pricing.tier5;
+    const ratePerKg = (selectedCalcProduct.pricing && selectedCalcProduct.pricing[calcCostTier]) || (selectedCalcProduct.pricing && selectedCalcProduct.pricing.tier5) || 0;
     const totalConcentrateCost = concentrateKg * ratePerKg;
     const costPerFinishedLitre = finishedLitres > 0 ? (totalConcentrateCost / finishedLitres) : 0;
 
@@ -571,7 +549,7 @@ export default function App() {
       saltKg: (saltGrams / 1000).toFixed(2),
       boosterGrams: boosterGrams.toFixed(0),
       boosterKg: (boosterGrams / 1000).toFixed(2),
-      ratePerKg,
+      ratePerKg: ratePerKg,
       totalConcentrateCost: Math.round(totalConcentrateCost),
       costPerFinishedLitre: costPerFinishedLitre.toFixed(2),
       restingHours: selectedCalcProduct.restingHours,
@@ -581,7 +559,6 @@ export default function App() {
     };
   }, [selectedCalcProduct, calcAmount, calcInputType, calcCostTier]);
 
-  // Save Product Update to Cloud
   const saveProductToCloud = async (productId, updatedFields) => {
     if (!user) return;
     try {
@@ -592,7 +569,6 @@ export default function App() {
     }
   };
 
-  // Save Transaction to Cloud
   const saveTransactionToCloud = async (txData) => {
     if (!user) return;
     try {
@@ -607,16 +583,14 @@ export default function App() {
     }
   };
 
-  // Open Edit Prices Modal
   const handleOpenEditPrice = (product) => {
-    setEditPriceModal({ open: true, product });
+    setEditPriceModal({ open: true, product: product });
     setEditTier5(product.pricing.tier5);
     setEditTier25(product.pricing.tier25);
     setEditTier50(product.pricing.tier50);
     setEditMinThreshold(product.minThresholdKg || 30);
   };
 
-  // Submit Price Edits
   const handleSavePriceEdits = async (e) => {
     e.preventDefault();
     const product = editPriceModal.product;
@@ -629,24 +603,21 @@ export default function App() {
     };
     const newMinThresh = parseFloat(editMinThreshold) || product.minThresholdKg;
 
-    // Update locally
     setProducts(prev => prev.map(p => p.id === product.id ? { 
       ...p, 
       pricing: newPricing,
       minThresholdKg: newMinThresh
     } : p));
 
-    // Update in Cloud
     await saveProductToCloud(product.id, {
       pricing: newPricing,
       minThresholdKg: newMinThresh
     });
 
-    showToast(`Updated rates for ${product.name}! Synced across all phones.`);
+    showToast("Updated rates for " + product.name + "! Synced across all phones.");
     setEditPriceModal({ open: false, product: null });
   };
 
-  // Quick Inward Shortcut (+5kg, +25kg, +50kg)
   const handleQuickAdd = async (product, addAmount) => {
     const current = Number(product.stockKg) || 0;
     const newStock = current + addAmount;
@@ -655,24 +626,23 @@ export default function App() {
     await saveProductToCloud(product.id, { stockKg: newStock });
 
     const newTx = {
-      id: `TX-${Date.now().toString().slice(-5)}`,
+      id: "TX-" + Date.now().toString().slice(-5),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
       type: 'INWARD',
       productId: product.id,
       productName: product.name,
       qty: addAmount,
       unit: "kg",
-      refNumber: `GRN-${addAmount}KG`,
+      refNumber: "GRN-" + addAmount + "KG",
       party: 'Factory Line Inward',
-      notes: `Quick batch addition +${addAmount}kg`,
+      notes: "Quick batch addition +" + addAmount + "kg",
       amount: addAmount * (product.pricing.tier25 || product.pricing.tier5)
     };
     await saveTransactionToCloud(newTx);
 
-    showToast(`Added +${addAmount}kg to ${product.name}! Stock is now ${newStock}kg`);
+    showToast("Added +" + addAmount + "kg to " + product.name + "! Stock is now " + newStock + "kg");
   };
 
-  // Inward / Dispatch Submit
   const handleStockUpdate = async (e) => {
     e.preventDefault();
     const qtyNum = parseFloat(modalQty);
@@ -686,7 +656,7 @@ export default function App() {
 
     const currentStock = Number(product.stockKg) || 0;
     if (quickStockModal.type === 'DISPATCH' && currentStock < qtyNum) {
-      showToast(`Cannot dispatch ${qtyNum}kg. Available stock is ${currentStock}kg!`, "error");
+      showToast("Cannot dispatch " + qtyNum + "kg. Available stock is " + currentStock + "kg!", "error");
       return;
     }
 
@@ -700,24 +670,24 @@ export default function App() {
     const totalAmt = Math.round(qtyNum * unitPrice);
 
     const newTx = {
-      id: `TX-${Date.now().toString().slice(-5)}`,
+      id: "TX-" + Date.now().toString().slice(-5),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
       type: quickStockModal.type,
       productId: product.id,
       productName: product.name,
       qty: qtyNum,
       unit: product.unit || "kg",
-      refNumber: modalRef || (quickStockModal.type === 'INWARD' ? `GRN-${Date.now().toString().slice(-4)}` : `DISP-${Date.now().toString().slice(-4)}`),
+      refNumber: modalRef || (quickStockModal.type === 'INWARD' ? "GRN-" + Date.now().toString().slice(-4) : "DISP-" + Date.now().toString().slice(-4)),
       party: modalParty || (quickStockModal.type === 'INWARD' ? 'Factory Batch' : 'Wholesale Client'),
-      notes: modalNotes || `${quickStockModal.type === 'INWARD' ? 'Stock Added' : 'Stock Dispatched'} @ ₹${unitPrice}/${product.unit}`,
+      notes: modalNotes || ((quickStockModal.type === 'INWARD' ? 'Stock Added' : 'Stock Dispatched') + " @ Rs." + unitPrice + "/" + product.unit),
       amount: totalAmt
     };
     await saveTransactionToCloud(newTx);
 
     showToast(
       quickStockModal.type === 'INWARD'
-        ? `Added +${qtyNum}kg to ${product.name}. Synced on all devices.`
-        : `Dispatched -${qtyNum}kg from ${product.name}. Synced on all devices.`
+        ? "Added +" + qtyNum + "kg to " + product.name + ". Synced on all devices."
+        : "Dispatched -" + qtyNum + "kg from " + product.name + ". Synced on all devices."
     );
 
     setQuickStockModal({ open: false, product: null, type: 'INWARD' });
@@ -727,14 +697,13 @@ export default function App() {
     setModalNotes('');
   };
 
-  // Dilution Batch
   const handleLogDilutionBatch = async () => {
     if (!formulationResult) return;
     const reqConc = parseFloat(formulationResult.concentrateKg);
     const currentStock = Number(selectedCalcProduct.stockKg) || 0;
 
     if (currentStock < reqConc) {
-      showToast(`Stock is ${currentStock}kg, but batch needs ${reqConc}kg. Inward concentrate first.`, "error");
+      showToast("Stock is " + currentStock + "kg, but batch needs " + reqConc + "kg. Inward concentrate first.", "error");
       return;
     }
 
@@ -743,22 +712,21 @@ export default function App() {
     await saveProductToCloud(selectedCalcProduct.id, { stockKg: newStock });
 
     const newTx = {
-      id: `TX-${Date.now().toString().slice(-5)}`,
+      id: "TX-" + Date.now().toString().slice(-5),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
       type: 'PRODUCTION_DILUTION',
       productId: selectedCalcProduct.id,
       productName: selectedCalcProduct.name,
       qty: reqConc,
       unit: "kg",
-      refNumber: `BATCH-${Date.now().toString().slice(-4)}`,
-      notes: `Mixed ${reqConc}kg concentrate with ${formulationResult.waterKg}kg ${selectedCalcProduct.waterType}. Yield: ${formulationResult.finishedLitres}L finished product.`
+      refNumber: "BATCH-" + Date.now().toString().slice(-4),
+      notes: "Mixed " + reqConc + "kg concentrate with " + formulationResult.waterKg + "kg " + selectedCalcProduct.waterType + ". Yield: " + formulationResult.finishedLitres + "L finished product."
     };
     await saveTransactionToCloud(newTx);
 
-    showToast(`Batch recorded: ${formulationResult.finishedLitres}L produced! Deducted on all phones.`);
+    showToast("Batch recorded: " + formulationResult.finishedLitres + "L produced! Deducted on all phones.");
   };
 
-  // Reset all stock to 0 kg
   const executeResetAllStock = async () => {
     setProducts(prev => prev.map(p => ({ ...p, stockKg: 0 })));
 
@@ -769,7 +737,7 @@ export default function App() {
       });
 
       const resetTx = {
-        id: `TX-RESET-${Date.now().toString().slice(-4)}`,
+        id: "TX-RESET-" + Date.now().toString().slice(-4),
         date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
         type: 'STOCK_RESET',
         productId: 'ALL-15',
@@ -777,7 +745,7 @@ export default function App() {
         qty: 0,
         unit: 'kg',
         refNumber: 'CLOUD-RESET',
-        party: `User: ${user.uid.slice(0, 6)}`,
+        party: "User: " + user.uid.slice(0, 6),
         notes: 'All 15 product inventories reset to 0 kg across all devices'
       };
       await saveTransactionToCloud(resetTx);
@@ -786,7 +754,6 @@ export default function App() {
     showToast("All 15 product stocks reset to 0 kg on all devices!");
   };
 
-  // Quotation Management
   const addQuoteItem = () => {
     setQuoteItems([...quoteItems, { productId: products[0].id, packSize: 25, quantityPacks: 1 }]);
   };
@@ -809,11 +776,13 @@ export default function App() {
       const qtyPacks = Number(item.quantityPacks) || 1;
       const totalKg = packSize * qtyPacks;
 
-      let ratePerKg = prod.pricing.tier5;
-      if (packSize >= 50 || totalKg >= 50) {
-        ratePerKg = prod.pricing.tier50;
-      } else if (packSize >= 25 || totalKg >= 25) {
-        ratePerKg = prod.pricing.tier25;
+      let ratePerKg = prod.pricing ? prod.pricing.tier5 : 0;
+      if (prod.pricing) {
+        if (packSize >= 50 || totalKg >= 50) {
+          ratePerKg = prod.pricing.tier50;
+        } else if (packSize >= 25 || totalKg >= 25) {
+          ratePerKg = prod.pricing.tier25;
+        }
       }
 
       const itemTotal = totalKg * ratePerKg;
@@ -822,9 +791,9 @@ export default function App() {
       return {
         ...item,
         prodName: prod.name,
-        totalKg,
-        ratePerKg,
-        itemTotal,
+        totalKg: totalKg,
+        ratePerKg: ratePerKg,
+        itemTotal: itemTotal,
         ratio: prod.ratioLabel
       };
     });
@@ -835,41 +804,40 @@ export default function App() {
 
     return {
       items: itemsDetailed,
-      subtotal,
-      totalAmount,
-      estimatedGstPortion,
-      baseValue
+      subtotal: subtotal,
+      totalAmount: totalAmount,
+      estimatedGstPortion: estimatedGstPortion,
+      baseValue: baseValue
     };
   }, [quoteItems, products]);
 
-  // WhatsApp Message Generator
   const generateWhatsAppMessage = () => {
     const lines = [
-      `*KHUSHALI CHEMICALS - OFFICIAL QUOTATION*`,
-      `📍 Jaipur, Rajasthan | 📞 +91 8905878950`,
-      `GST: 08PBDPS5444B1ZD | Web: khushalichemicals.com`,
-      `------------------------------------------`,
-      `👤 *Client:* ${quoteCustomerName || 'Valued Buyer'} (${quoteCustomerCity || 'India'})`,
-      `📅 *Date:* ${new Date().toLocaleDateString('en-IN')}`,
-      `------------------------------------------`,
-      `*ORDER SUMMARY (All Rates 18% GST Included):*`
+      "*KHUSHALI CHEMICALS - OFFICIAL QUOTATION*",
+      "📍 Jaipur, Rajasthan | 📞 +91 8905878950",
+      "GST: 08PBDPS5444B1ZD | Web: khushalichemicals.com",
+      "------------------------------------------",
+      "*Client:* " + (quoteCustomerName || 'Valued Buyer') + " (" + (quoteCustomerCity || 'India') + ")",
+      "*Date:* " + new Date().toLocaleDateString('en-IN'),
+      "------------------------------------------",
+      "*ORDER SUMMARY (All Rates 18% GST Included):*"
     ];
 
     quoteCalculations.items.forEach((it, idx) => {
-      lines.push(`${idx + 1}. *${it.prodName}*`);
-      lines.push(`   📦 ${it.quantityPacks} Can(s) of ${it.packSize}kg = ${it.totalKg}kg @ ₹${it.ratePerKg}/kg`);
-      lines.push(`   👉 *Total: ₹${it.itemTotal.toLocaleString('en-IN')}* (Yield: ~${it.ratio})`);
+      lines.push((idx + 1) + ". *" + it.prodName + "*");
+      lines.push("   📦 " + it.quantityPacks + " Can(s) of " + it.packSize + "kg = " + it.totalKg + "kg @ Rs." + it.ratePerKg + "/kg");
+      lines.push("   👉 *Total: Rs." + it.itemTotal.toLocaleString('en-IN') + "* (Yield: ~" + it.ratio + ")");
     });
 
-    lines.push(`------------------------------------------`);
-    lines.push(`💰 *TOTAL INVOICE VALUE: ₹${quoteCalculations.totalAmount.toLocaleString('en-IN')}*`);
-    lines.push(`(18% GST included: ₹${quoteCalculations.estimatedGstPortion.toLocaleString('en-IN')})`);
-    lines.push(`------------------------------------------`);
-    lines.push(`✨ *Why Khushali Chemicals Ready Concentrates?*`);
-    lines.push(`• Single ready mixture replaces 4-5 complicated raw materials.`);
-    lines.push(`• Zero time waste, perfect viscosity & stable formulations.`);
-    lines.push(`• Nationwide supply covering 20+ states.`);
-    lines.push(`\nTo confirm this order, kindly reply to this message or call 8905878950.`);
+    lines.push("------------------------------------------");
+    lines.push("💰 *TOTAL INVOICE VALUE: Rs." + quoteCalculations.totalAmount.toLocaleString('en-IN') + "*");
+    lines.push("(18% GST included: Rs." + quoteCalculations.estimatedGstPortion.toLocaleString('en-IN') + ")");
+    lines.push("------------------------------------------");
+    lines.push("✨ *Why Khushali Chemicals Ready Concentrates?*");
+    lines.push("• Single ready mixture replaces 4-5 complicated raw materials.");
+    lines.push("• Zero time waste, perfect viscosity & stable formulations.");
+    lines.push("• Nationwide supply covering 20+ states.");
+    lines.push("\nTo confirm this order, kindly reply to this message or call 8905878950.");
 
     return lines.join('\n');
   };
@@ -891,7 +859,7 @@ export default function App() {
 
   const openWhatsAppShare = () => {
     const msg = encodeURIComponent(generateWhatsAppMessage());
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
+    window.open("https://wa.me/?text=" + msg, '_blank');
   };
 
   const copyShareLink = () => {
@@ -911,19 +879,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md border flex items-center gap-3 transition-all ${
-          notification.type === 'error'
-            ? 'bg-rose-950/90 border-rose-600 text-rose-200'
-            : 'bg-emerald-950/90 border-emerald-600 text-emerald-200'
-        }`}>
+        <div className={"fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md border flex items-center gap-3 transition-all " + (notification.type === 'error' ? 'bg-rose-950/90 border-rose-600 text-rose-200' : 'bg-emerald-950/90 border-emerald-600 text-emerald-200')}>
           <span className="text-xl">{notification.type === 'error' ? '⚠️' : '✅'}</span>
           <p className="text-sm font-medium">{notification.msg}</p>
         </div>
       )}
 
-      {/* TOP HEADER */}
       <header className="bg-slate-950/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
@@ -936,11 +898,7 @@ export default function App() {
                   <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
                     KHUSHALI <span className="text-cyan-400 font-extrabold">CHEMICALS</span>
                   </h1>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border flex items-center gap-1 ${
-                    isCloudConnected 
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-700' 
-                      : 'bg-amber-950 text-amber-300 border-amber-700'
-                  }`}>
+                  <span className={"px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md border flex items-center gap-1 " + (isCloudConnected ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-amber-950 text-amber-300 border-amber-700')}>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>15 PRODUCTS</span>
                   </span>
@@ -970,11 +928,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* NAVIGATION TABS */}
         <div className="border-t border-slate-800/80 bg-slate-950/60 overflow-x-auto scrollbar-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-2 py-2">
             {[
-              { id: 'inventory', label: '📦 Live Stock (15 Products)', badge: `${products.filter(p => (p.stockKg || 0) > 0).length} in stock` },
+              { id: 'inventory', label: '📦 Live Stock (15 Products)', badge: products.filter(p => (p.stockKg || 0) > 0).length + " in stock" },
               { id: 'calculator', label: '🧪 Batch Dilution Engine', badge: '1:6 to 1:100' },
               { id: 'quotation', label: '💬 WhatsApp Quotation & GST', badge: '18% Inc.' },
               { id: 'ledger', label: '📋 Cloud Stock Ledger', badge: transactions.length },
@@ -983,17 +940,11 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
-                }`}
+                className={"whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all flex items-center gap-2 " + (activeTab === tab.id ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70')}
               >
                 {tab.label}
                 {tab.badge && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                    activeTab === tab.id ? 'bg-blue-800 text-blue-100' : 'bg-slate-800 text-slate-300'
-                  }`}>
+                  <span className={"text-[10px] px-1.5 py-0.5 rounded-full " + (activeTab === tab.id ? 'bg-blue-800 text-blue-100' : 'bg-slate-800 text-slate-300')}>
                     {tab.badge}
                   </span>
                 )}
@@ -1003,14 +954,13 @@ export default function App() {
         </div>
       </header>
 
-      {/* SYNC BANNER */}
       <div className="bg-slate-950/70 border-b border-slate-800/80 py-2 px-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-xs gap-2">
           <div className="flex items-center gap-2 text-slate-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>{syncStatus}</span>
             <span className="text-[11px] text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
-              Toilet Cleaner: ₹{products.find(p=>p.id==="KHU-004")?.pricing.tier5}/kg • Floor Cleaner: ₹{products.find(p=>p.id==="KHU-006")?.pricing.tier5}/kg
+              Toilet Cleaner: Rs.{products.find(p=>p.id==="KHU-004")?.pricing.tier5}/kg • Floor Cleaner: Rs.{products.find(p=>p.id==="KHU-006")?.pricing.tier5}/kg
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -1024,10 +974,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* MAIN BODY */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-        {/* KPI DASHBOARD */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
@@ -1058,10 +1005,10 @@ export default function App() {
           <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
               <span>Stock Valuation (Tier 25kg)</span>
-              <span className="text-emerald-400 text-lg">₹</span>
+              <span className="text-emerald-400 text-lg">Rs.</span>
             </div>
             <div className="text-xl sm:text-2xl font-black text-emerald-400">
-              ₹{inventoryStats.totalStockValuation.toLocaleString('en-IN')}
+              Rs.{inventoryStats.totalStockValuation.toLocaleString('en-IN')}
             </div>
             <div className="mt-1 text-[11px] text-slate-400">
               GST 18% inclusive
@@ -1082,7 +1029,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* TAB 1: LIVE INVENTORY */}
         {activeTab === 'inventory' && (
           <div className="space-y-5">
             <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
@@ -1104,11 +1050,7 @@ export default function App() {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`text-xs px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition ${
-                      selectedCategory === cat
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                    }`}
+                    className={"text-xs px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition " + (selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800')}
                   >
                     {cat}
                   </button>
@@ -1116,7 +1058,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 15 Product Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((p) => {
                 const stockValKg = Number(p.stockKg) || 0;
@@ -1125,9 +1066,7 @@ export default function App() {
                 return (
                   <div
                     key={p.id}
-                    className={`bg-slate-800/90 rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-xl hover:border-slate-600 ${
-                      isZero ? 'border-slate-700/60' : 'border-blue-500/40 ring-1 ring-blue-500/20'
-                    }`}
+                    className={"bg-slate-800/90 rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-xl hover:border-slate-600 " + (isZero ? 'border-slate-700/60' : 'border-blue-500/40 ring-1 ring-blue-500/20')}
                   >
                     <div className="p-4 sm:p-5">
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -1145,7 +1084,6 @@ export default function App() {
                           </span>
                         </div>
 
-                        {/* Edit Price Button */}
                         <button
                           onClick={() => handleOpenEditPrice(p)}
                           className="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium transition flex items-center gap-1"
@@ -1163,7 +1101,6 @@ export default function App() {
                         Ratio: <span className="font-semibold text-slate-200">{p.ratioLabel}</span> • {p.waterType}
                       </p>
 
-                      {/* Stock Level Bar */}
                       <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 mb-3">
                         <div className="flex items-baseline justify-between mb-1">
                           <span className="text-xs text-slate-400">Available Stock:</span>
@@ -1172,7 +1109,6 @@ export default function App() {
                           </span>
                         </div>
 
-                        {/* Quick Inward Shortcuts */}
                         <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
                           <span className="text-slate-500 text-[10px]">Cloud Inward:</span>
                           <div className="flex gap-1">
@@ -1198,7 +1134,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Price Tiers Display */}
                       <div 
                         onClick={() => handleOpenEditPrice(p)}
                         className="bg-slate-950/40 hover:bg-slate-950/80 cursor-pointer rounded-xl p-2 border border-slate-800/70 text-xs transition"
@@ -1211,21 +1146,20 @@ export default function App() {
                         <div className="grid grid-cols-3 gap-1 text-center font-mono">
                           <div className="bg-slate-900/90 py-1 rounded border border-slate-800">
                             <div className="text-[9px] text-slate-400">5 kg</div>
-                            <div className="font-bold text-white">₹{p.pricing.tier5}</div>
+                            <div className="font-bold text-white">Rs.{p.pricing.tier5}</div>
                           </div>
                           <div className="bg-slate-900/90 py-1 rounded border border-slate-800">
                             <div className="text-[9px] text-slate-400">25 kg</div>
-                            <div className="font-bold text-blue-300">₹{p.pricing.tier25}</div>
+                            <div className="font-bold text-blue-300">Rs.{p.pricing.tier25}</div>
                           </div>
                           <div className="bg-slate-900/90 py-1 rounded border border-slate-800">
                             <div className="text-[9px] text-slate-400">50 kg</div>
-                            <div className="font-bold text-emerald-400">₹{p.pricing.tier50}</div>
+                            <div className="font-bold text-emerald-400">Rs.{p.pricing.tier50}</div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="bg-slate-900/80 p-3 border-t border-slate-700/60 grid grid-cols-3 gap-2">
                       <button
                         onClick={() => {
@@ -1264,7 +1198,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: BATCH DILUTION ENGINE */}
         {activeTab === 'calculator' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-5 bg-slate-800/90 rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-md">
@@ -1288,7 +1221,7 @@ export default function App() {
                   >
                     {products.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} (Rate: ₹{p.pricing.tier25}/kg, Ratio: {p.ratioLabel}) — Live Stock: {p.stockKg || 0}kg
+                        {p.name} (Rate: Rs.{p.pricing.tier25}/kg, Ratio: {p.ratioLabel}) — Live Stock: {p.stockKg || 0}kg
                       </option>
                     ))}
                   </select>
@@ -1302,22 +1235,14 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setCalcInputType("CONCENTRATE")}
-                      className={`py-2 text-xs font-bold rounded-lg transition ${
-                        calcInputType === "CONCENTRATE"
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
+                      className={"py-2 text-xs font-bold rounded-lg transition " + (calcInputType === "CONCENTRATE" ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white')}
                     >
                       From Concentrate (kg)
                     </button>
                     <button
                       type="button"
                       onClick={() => setCalcInputType("DESIRED_OUTPUT")}
-                      className={`py-2 text-xs font-bold rounded-lg transition ${
-                        calcInputType === "DESIRED_OUTPUT"
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
+                      className={"py-2 text-xs font-bold rounded-lg transition " + (calcInputType === "DESIRED_OUTPUT" ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white')}
                     >
                       Target Output (Litres)
                     </button>
@@ -1375,14 +1300,10 @@ export default function App() {
                         key={tier.id}
                         type="button"
                         onClick={() => setCalcCostTier(tier.id)}
-                        className={`p-2 rounded-xl border text-center font-mono transition ${
-                          calcCostTier === tier.id
-                            ? 'bg-blue-900/60 border-blue-500 text-white font-bold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
+                        className={"p-2 rounded-xl border text-center font-mono transition " + (calcCostTier === tier.id ? 'bg-blue-900/60 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700')}
                       >
                         <div className="text-[10px] text-slate-400">{tier.label}</div>
-                        <div className="font-bold text-slate-200">₹{tier.price}/kg</div>
+                        <div className="font-bold text-slate-200">Rs.{tier.price}/kg</div>
                       </button>
                     ))}
                   </div>
@@ -1390,7 +1311,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Formula Breakdown */}
             <div className="lg:col-span-7 space-y-4">
               {formulationResult && (
                 <div className="bg-slate-800/90 rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-lg space-y-5">
@@ -1490,14 +1410,14 @@ export default function App() {
                     <div>
                       <div className="text-xs text-slate-400">Raw Concentrate Cost</div>
                       <div className="text-lg font-bold text-white font-mono">
-                        ₹{formulationResult.totalConcentrateCost.toLocaleString('en-IN')}{' '}
-                        <span className="text-xs text-slate-400 font-normal">(@ ₹{formulationResult.ratePerKg}/kg)</span>
+                        Rs.{formulationResult.totalConcentrateCost.toLocaleString('en-IN')}{' '}
+                        <span className="text-xs text-slate-400 font-normal">(@ Rs.{formulationResult.ratePerKg}/kg)</span>
                       </div>
                     </div>
                     <div className="text-center sm:text-right">
                       <div className="text-xs text-slate-400">Estimated Cost / Finished Litre</div>
                       <div className="text-2xl font-black text-emerald-400 font-mono">
-                        ₹{formulationResult.costPerFinishedLitre} <span className="text-xs text-slate-300">/ L</span>
+                        Rs.{formulationResult.costPerFinishedLitre} <span className="text-xs text-slate-300">/ L</span>
                       </div>
                     </div>
                   </div>
@@ -1505,16 +1425,12 @@ export default function App() {
                   <button
                     onClick={handleLogDilutionBatch}
                     disabled={!formulationResult.availableInStock}
-                    className={`w-full py-3 px-4 rounded-xl text-sm font-bold shadow-lg transition flex items-center justify-center gap-2 ${
-                      formulationResult.availableInStock
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/30'
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                    }`}
+                    className={"w-full py-3 px-4 rounded-xl text-sm font-bold shadow-lg transition flex items-center justify-center gap-2 " + (formulationResult.availableInStock ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700')}
                   >
                     <span>⚡</span>
                     {formulationResult.availableInStock
-                      ? `Log Finished Batch (${formulationResult.finishedLitres}L) & Deduct ${formulationResult.concentrateKg}kg on All Phones`
-                      : `Stock Insufficient (Have ${selectedCalcProduct.stockKg || 0}kg, need ${formulationResult.concentrateKg}kg)`}
+                      ? "Log Finished Batch (" + formulationResult.finishedLitres + "L) & Deduct " + formulationResult.concentrateKg + "kg on All Phones"
+                      : "Stock Insufficient (Have " + (selectedCalcProduct.stockKg || 0) + "kg, need " + formulationResult.concentrateKg + "kg)"}
                   </button>
                 </div>
               )}
@@ -1522,7 +1438,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: WHATSAPP QUOTATION BUILDER */}
         {activeTab === 'quotation' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-6 bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-md space-y-5">
@@ -1594,7 +1509,7 @@ export default function App() {
                       >
                         {products.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.name} (₹{p.pricing.tier25}/kg for 25kg)
+                            {p.name} (Rs.{p.pricing ? p.pricing.tier25 : 0}/kg for 25kg)
                           </option>
                         ))}
                       </select>
@@ -1645,11 +1560,11 @@ export default function App() {
                       <div>
                         <div className="font-bold text-white">{it.prodName}</div>
                         <div className="text-[11px] text-slate-400">
-                          {it.quantityPacks} can(s) × {it.packSize}kg = <span className="text-cyan-300 font-semibold">{it.totalKg}kg</span> @ ₹{it.ratePerKg}/kg
+                          {it.quantityPacks} can(s) × {it.packSize}kg = <span className="text-cyan-300 font-semibold">{it.totalKg}kg</span> @ Rs.{it.ratePerKg}/kg
                         </div>
                       </div>
                       <div className="text-right font-mono font-bold text-slate-200">
-                        ₹{it.itemTotal.toLocaleString('en-IN')}
+                        Rs.{it.itemTotal.toLocaleString('en-IN')}
                       </div>
                     </div>
                   ))}
@@ -1658,16 +1573,16 @@ export default function App() {
                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
                   <div className="flex justify-between text-slate-400">
                     <span>Base Taxable Amount:</span>
-                    <span className="font-mono">₹{quoteCalculations.baseValue.toLocaleString('en-IN')}</span>
+                    <span className="font-mono">Rs.{quoteCalculations.baseValue.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
                     <span>GST (18% included in rates):</span>
-                    <span className="font-mono">₹{quoteCalculations.estimatedGstPortion.toLocaleString('en-IN')}</span>
+                    <span className="font-mono">Rs.{quoteCalculations.estimatedGstPortion.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="pt-2 border-t border-slate-800 flex justify-between items-baseline text-sm font-bold text-white">
                     <span>Total Payable:</span>
                     <span className="text-xl font-black text-emerald-400 font-mono">
-                      ₹{quoteCalculations.totalAmount.toLocaleString('en-IN')}
+                      Rs.{quoteCalculations.totalAmount.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
@@ -1692,7 +1607,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: CLOUD AUDIT LEDGER */}
         {activeTab === 'ledger' && (
           <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-md space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700">
@@ -1708,13 +1622,13 @@ export default function App() {
                   onClick={() => {
                     const headers = "ID,Date,Type,Product,Qty,Unit,Reference,Party,Amount,Notes\n";
                     const rows = transactions.map(t => 
-                      `"${t.id}","${t.date}","${t.type}","${t.productName}","${t.qty}","${t.unit}","${t.refNumber || ''}","${t.party || ''}","${t.amount || 0}","${t.notes || ''}"`
+                      '"' + t.id + '","' + t.date + '","' + t.type + '","' + t.productName + '","' + t.qty + '","' + t.unit + '","' + (t.refNumber || '') + '","' + (t.party || '') + '","' + (t.amount || 0) + '","' + (t.notes || '') + '"'
                     ).join("\n");
                     const blob = new Blob([headers + rows], { type: 'text/csv' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Khushali_Ledger_${Date.now()}.csv`;
+                    a.download = "Khushali_Ledger_" + Date.now() + ".csv";
                     a.click();
                     showToast("Ledger CSV downloaded!");
                   }}
@@ -1739,7 +1653,7 @@ export default function App() {
                       <th className="py-3 px-3">Product Name</th>
                       <th className="py-3 px-3">Quantity</th>
                       <th className="py-3 px-3">Reference / Device</th>
-                      <th className="py-3 px-3 text-right">Amount (₹)</th>
+                      <th className="py-3 px-3 text-right">Amount (Rs.)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-mono">
@@ -1755,15 +1669,7 @@ export default function App() {
                             <div className="text-[10px] text-slate-500 font-normal">{tx.id}</div>
                           </td>
                           <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              isPlus
-                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                                : isDilution
-                                ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
-                                : isReset
-                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                                : 'bg-blue-950 text-blue-300 border border-blue-800'
-                            }`}>
+                            <span className={"px-2 py-0.5 rounded text-[10px] font-bold " + (isPlus ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : isDilution ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' : isReset ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-blue-950 text-blue-300 border border-blue-800')}>
                               {tx.type}
                             </span>
                           </td>
@@ -1771,7 +1677,7 @@ export default function App() {
                             {tx.productName}
                           </td>
                           <td className="py-3 px-3">
-                            <span className={`font-bold ${isPlus ? 'text-emerald-400' : isReset ? 'text-rose-400' : 'text-slate-300'}`}>
+                            <span className={"font-bold " + (isPlus ? 'text-emerald-400' : isReset ? 'text-rose-400' : 'text-slate-300')}>
                               {isPlus ? '+' : isReset ? '' : '-'}{tx.qty} {tx.unit}
                             </span>
                           </td>
@@ -1780,7 +1686,7 @@ export default function App() {
                             <div className="text-[10px] text-slate-500">{tx.notes}</div>
                           </td>
                           <td className="py-3 px-3 text-right font-bold text-slate-200">
-                            {tx.amount ? `₹${tx.amount.toLocaleString('en-IN')}` : '-'}
+                            {tx.amount ? "Rs." + tx.amount.toLocaleString('en-IN') : '-'}
                           </td>
                         </tr>
                       );
@@ -1792,7 +1698,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 5: 15 FORMULAS REFERENCE & OFFICIAL PRICE LIST */}
         {activeTab === 'catalog' && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-2xl p-6 border border-blue-800/50 shadow-md">
@@ -1872,9 +1777,9 @@ export default function App() {
                         <td className="py-3 px-3 font-mono font-bold text-cyan-300">
                           {p.ratioLabel}
                         </td>
-                        <td className="py-3 px-3 font-mono">₹{p.pricing.tier5}</td>
-                        <td className="py-3 px-3 font-mono text-blue-300">₹{p.pricing.tier25}</td>
-                        <td className="py-3 px-3 font-mono text-emerald-400 font-bold">₹{p.pricing.tier50}</td>
+                        <td className="py-3 px-3 font-mono">Rs.{p.pricing.tier5}</td>
+                        <td className="py-3 px-3 font-mono text-blue-300">Rs.{p.pricing.tier25}</td>
+                        <td className="py-3 px-3 font-mono text-emerald-400 font-bold">Rs.{p.pricing.tier50}</td>
                         <td className="py-3 px-3 text-[11px] text-slate-300">
                           {p.waterType}
                         </td>
@@ -1896,7 +1801,6 @@ export default function App() {
         )}
       </main>
 
-      {/* EDIT PRICES MODAL */}
       {editPriceModal.open && editPriceModal.product && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -1925,7 +1829,7 @@ export default function App() {
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    5kg Rate (₹/kg)
+                    5kg Rate (Rs./kg)
                   </label>
                   <input
                     type="number"
@@ -1938,7 +1842,7 @@ export default function App() {
                 </div>
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    25kg Rate (₹/kg)
+                    25kg Rate (Rs./kg)
                   </label>
                   <input
                     type="number"
@@ -1951,7 +1855,7 @@ export default function App() {
                 </div>
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    50kg Rate (₹/kg)
+                    50kg Rate (Rs./kg)
                   </label>
                   <input
                     type="number"
@@ -1998,7 +1902,6 @@ export default function App() {
         </div>
       )}
 
-      {/* QUICK INWARD / DISPATCH MODAL */}
       {quickStockModal.open && quickStockModal.product && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -2053,9 +1956,9 @@ export default function App() {
                   onChange={(e) => setModalPriceTier(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 >
-                  <option value="tier5">5kg Rate (₹{quickStockModal.product.pricing.tier5}/kg)</option>
-                  <option value="tier25">25kg Rate (₹{quickStockModal.product.pricing.tier25}/kg)</option>
-                  <option value="tier50">50kg Rate (₹{quickStockModal.product.pricing.tier50}/kg)</option>
+                  <option value="tier5">5kg Rate (Rs.{quickStockModal.product.pricing.tier5}/kg)</option>
+                  <option value="tier25">25kg Rate (Rs.{quickStockModal.product.pricing.tier25}/kg)</option>
+                  <option value="tier50">50kg Rate (Rs.{quickStockModal.product.pricing.tier50}/kg)</option>
                 </select>
               </div>
 
@@ -2095,11 +1998,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className={`flex-1 py-2.5 rounded-xl font-bold text-white transition ${
-                    quickStockModal.type === 'INWARD'
-                      ? 'bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30'
-                      : 'bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/30'
-                  }`}
+                  className={"flex-1 py-2.5 rounded-xl font-bold text-white transition " + (quickStockModal.type === 'INWARD' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30' : 'bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/30')}
                 >
                   Confirm & Sync
                 </button>
@@ -2109,7 +2008,6 @@ export default function App() {
         </div>
       )}
 
-      {/* CONFIRM RESET MODAL (No native browser alerts/confirms) */}
       {confirmResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
           <div className="bg-slate-900 border border-rose-800/80 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
@@ -2137,7 +2035,6 @@ export default function App() {
         </div>
       )}
 
-      {/* CONNECT PHONES MODAL */}
       {shareModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -2193,7 +2090,6 @@ export default function App() {
         </div>
       )}
 
-      {/* FOOTER */}
       <footer className="bg-slate-950 border-t border-slate-800 py-4 px-4 text-center text-xs text-slate-500">
         <p>
           Khushali Chemicals • Jaipur, Rajasthan • Contact: +91 8905878950 • GST: 08PBDPS5444B1ZD
@@ -2202,4 +2098,3 @@ export default function App() {
     </div>
   );
 }
-```
