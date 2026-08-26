@@ -334,15 +334,19 @@ const DEFAULT_PRODUCTS = [
 ];
 
 // --- FIREBASE INITIALIZATION ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  apiKey: "demo-api-key",
-  authDomain: "demo-app.firebaseapp.com",
-  projectId: "demo-app"
+const firebaseConfig = {
+  apiKey: "AIzaSyD3pPGlB37Njyp7IVnV2a0k4ArRNJFZ9JY",
+  authDomain: "khushali-a24f0.firebaseapp.com",
+  projectId: "khushali-a24f0",
+  storageBucket: "khushali-a24f0.firebasestorage.app",
+  messagingSenderId: "1072051479007",
+  appId: "1:1072051479007:web:47acc32a1cb85e7c4f246a",
+  measurementId: "G-QGVJV5V7HS"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'khushali-chemicals-v1';
+const appId = 'khushali-chemicals-v1';
 
 export default function App() {
   const [user, setUser] = useState(null);
