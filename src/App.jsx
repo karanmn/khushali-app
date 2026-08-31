@@ -1263,8 +1263,8 @@ export default function App() {
                   <div className="relative">
                     <input
                       type="number"
-                      min="0.1"
-                      step="0.5"
+                      min="0"
+                      step="any"
                       value={calcAmount}
                       onChange={(e) => setCalcAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-blue-500 font-mono"
@@ -1939,8 +1939,8 @@ export default function App() {
                 </label>
                 <input
                   type="number"
-                  step="0.5"
-                  min="0.1"
+                  step="any"
+                  min="0"
                   required
                   placeholder="e.g. 25"
                   value={modalQty}
