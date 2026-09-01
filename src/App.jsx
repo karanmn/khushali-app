@@ -809,14 +809,14 @@ export default function App() {
 
   const generateWhatsAppMessage = () => {
     const lines = [
-      "*KHUSHALI CHEMICALS - OFFICIAL QUOTATION*",
+      "*KHUSHALI CHEMICALS - QUOTATION*",
       "📍 Jaipur, Rajasthan | 📞 +91 8905878950",
       "GST: 08PBDPS5444B1ZD | Web: khushalichemicals.com",
       "------------------------------------------",
       "*Client:* " + (quoteCustomerName || 'Valued Buyer') + " (" + (quoteCustomerCity || 'India') + ")",
       "*Date:* " + new Date().toLocaleDateString('en-IN'),
       "------------------------------------------",
-      "*ORDER SUMMARY (All Rates 18% GST Included):*"
+      "*ORDER SUMMARY:*"
     ];
 
     quoteCalculations.items.forEach((it, idx) => {
@@ -828,11 +828,6 @@ export default function App() {
     lines.push("------------------------------------------");
     lines.push("💰 *TOTAL INVOICE VALUE: Rs." + quoteCalculations.totalAmount.toLocaleString('en-IN') + "*");
     lines.push("(18% GST included: Rs." + quoteCalculations.estimatedGstPortion.toLocaleString('en-IN') + ")");
-    lines.push("------------------------------------------");
-    lines.push("✨ *Why Khushali Chemicals Ready Concentrates?*");
-    lines.push("• Single ready mixture replaces 4-5 complicated raw materials.");
-    lines.push("• Zero time waste, perfect viscosity & stable formulations.");
-    lines.push("• Nationwide supply covering 20+ states.");
     lines.push("\nTo confirm this order, kindly reply to this message or call 8905878950.");
 
     return lines.join('\n');
@@ -1489,61 +1484,90 @@ export default function App() {
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {quoteItems.map((item, idx) => {
-                  const prod = products.find(p => p.id === item.productId) || products[0];
-                  return (
-                    <div key={idx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400">Item #{idx + 1}</span>
-                        {quoteItems.length > 1 && (
-                          <button
-                            onClick={() => removeQuoteItem(idx)}
-                            className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
+  const prod = products.find(p => p.id === item.productId) || products[0];
+  
+  // Check if current packSize is a standard predefined size or a custom one
+  const isCustomSize = !prod.packSizes.includes(item.packSize);
 
-                      <select
-                        value={item.productId}
-                        onChange={(e) => updateQuoteItem(idx, 'productId', e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-blue-500"
-                      >
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} (Rs.{p.pricing ? p.pricing.tier25 : 0}/kg for 25kg)
-                          </option>
-                        ))}
-                      </select>
+  return (
+    <div key={idx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-400">Item #{idx + 1}</span>
+        {quoteItems.length > 1 && (
+          <button
+            onClick={() => removeQuoteItem(idx)}
+            className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <label className="block text-[10px] text-slate-400 mb-1">Can Size (kg)</label>
-                          <select
-                            value={item.packSize}
-                            onChange={(e) => updateQuoteItem(idx, 'packSize', Number(e.target.value))}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
-                          >
-                            {prod.packSizes.map(sz => (
-                              <option key={sz} value={sz}>{sz} kg Can</option>
-                            ))}
-                          </select>
-                        </div>
+      <select
+        value={item.productId}
+        onChange={(e) => updateQuoteItem(idx, 'productId', e.target.value)}
+        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-blue-500"
+      >
+        {products.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name} (Rs.{p.pricing ? p.pricing.tier25 : 0}/kg)
+          </option>
+        ))}
+      </select>
 
-                        <div>
-                          <label className="block text-[10px] text-slate-400 mb-1">Quantity of Cans</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantityPacks}
-                            onChange={(e) => updateQuoteItem(idx, 'quantityPacks', Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <label className="block text-[10px] text-slate-400 mb-1">Can Size (kg)</label>
+          <select
+            value={isCustomSize ? 'CUSTOM' : item.packSize}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'CUSTOM') {
+                updateQuoteItem(idx, 'packSize', 10); // Default custom start
+              } else {
+                updateQuoteItem(idx, 'packSize', Number(val));
+              }
+            }}
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+          >
+            {prod.packSizes.map(sz => (
+              <option key={sz} value={sz}>{sz} kg Can</option>
+            ))}
+            <option value="CUSTOM">➕ Custom Size...</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] text-slate-400 mb-1">Quantity of Cans</label>
+          <input
+            type="number"
+            min="1"
+            value={item.quantityPacks}
+            onChange={(e) => updateQuoteItem(idx, 'quantityPacks', Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+          />
+        </div>
+      </div>
+
+      {/* If Custom Size is selected, show an input box to type any number */}
+      {isCustomSize && (
+        <div className="pt-1">
+          <label className="block text-[10px] text-cyan-400 mb-1">Enter Custom Pack Size (kg)</label>
+          <input
+            type="number"
+            min="0.1"
+            step="0.5"
+            value={item.packSize}
+            onChange={(e) => updateQuoteItem(idx, 'packSize', Math.max(0.1, parseFloat(e.target.value) || 1))}
+            placeholder="e.g. 35"
+            className="w-full bg-slate-950 border border-cyan-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+          />
+        </div>
+      )}
+    </div>
+  );
+})}
+
               </div>
             </div>
 
