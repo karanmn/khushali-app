@@ -10,6 +10,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  deleteDoc,
   onSnapshot 
 } from 'firebase/firestore';
 
@@ -359,6 +360,9 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [notification, setNotification] = useState(null);
 
+  // Ledger Sort State ('desc' = newest first, 'asc' = oldest first)
+  const [ledgerSortOrder, setLedgerSortOrder] = useState('desc');
+
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [confirmResetModal, setConfirmResetModal] = useState(false);
 
@@ -418,7 +422,6 @@ export default function App() {
       productsRef,
       (snapshot) => {
         if (snapshot.empty) {
-          // Initialize in database on first load
           DEFAULT_PRODUCTS.forEach(async (p) => {
             try {
               await setDoc(doc(db, 'products', p.id), p, { merge: true });
@@ -460,7 +463,6 @@ export default function App() {
         snapshot.forEach(docSnap => {
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
-        list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         setTransactions(list);
       },
       (error) => {
@@ -473,6 +475,17 @@ export default function App() {
       unsubTx();
     };
   }, []);
+
+  // Sorted Transactions based on ledgerSortOrder
+  const sortedTransactions = useMemo(() => {
+    const list = [...transactions];
+    list.sort((a, b) => {
+      const timeA = a.timestamp || 0;
+      const timeB = b.timestamp || 0;
+      return ledgerSortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+    return list;
+  }, [transactions, ledgerSortOrder]);
 
   const saveProductToCloud = async (productId, updatedFields) => {
     try {
@@ -491,6 +504,43 @@ export default function App() {
       });
     } catch (err) {
       console.error("Failed to save tx:", err);
+    }
+  };
+
+  // Undo / Delete Transaction Functionality
+  const handleDeleteTransaction = async (tx) => {
+    if (!window.confirm(`Are you sure you want to undo/delete transaction [${tx.id}]? This will reverse the stock change!`)) {
+      return;
+    }
+
+    try {
+      // 1. Reverse stock change if applicable
+      if (tx.productId && tx.qty && tx.type) {
+        const targetProd = products.find(p => p.id === tx.productId);
+        if (targetProd) {
+          let currentStock = Number(targetProd.stockKg) || 0;
+          let newStock = currentStock;
+
+          if (tx.type === 'INWARD' || tx.type === 'PRODUCTION_DILUTION') {
+            // If we added stock or mixed a batch, undoing means subtracting it back
+            newStock = Math.max(0, currentStock - Number(tx.qty));
+          } else if (tx.type === 'DISPATCH') {
+            // If we dispatched stock, undoing means adding it back
+            newStock = currentStock + Number(tx.qty);
+          }
+
+          // Update product stock locally and in cloud
+          setProducts(prev => prev.map(p => p.id === targetProd.id ? { ...p, stockKg: newStock } : p));
+          await saveProductToCloud(targetProd.id, { stockKg: newStock });
+        }
+      }
+
+      // 2. Delete transaction from Firestore
+      await deleteDoc(doc(db, 'transactions', tx.id));
+      showToast(`Transaction ${tx.id} deleted and stock adjusted successfully!`);
+    } catch (err) {
+      console.error("Error deleting transaction:", err);
+      showToast("Failed to delete transaction: " + err.message, "error");
     }
   };
 
@@ -1484,90 +1534,86 @@ export default function App() {
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {quoteItems.map((item, idx) => {
-  const prod = products.find(p => p.id === item.productId) || products[0];
-  
-  // Check if current packSize is a standard predefined size or a custom one
-  const isCustomSize = !prod.packSizes.includes(item.packSize);
+                  const prod = products.find(p => p.id === item.productId) || products[0];
+                  const isCustomSize = !prod.packSizes.includes(item.packSize);
 
-  return (
-    <div key={idx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-400">Item #{idx + 1}</span>
-        {quoteItems.length > 1 && (
-          <button
-            onClick={() => removeQuoteItem(idx)}
-            className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
-          >
-            Remove
-          </button>
-        )}
-      </div>
+                  return (
+                    <div key={idx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400">Item #{idx + 1}</span>
+                        {quoteItems.length > 1 && (
+                          <button
+                            onClick={() => removeQuoteItem(idx)}
+                            className="text-xs text-rose-400 hover:text-rose-300 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
 
-      <select
-        value={item.productId}
-        onChange={(e) => updateQuoteItem(idx, 'productId', e.target.value)}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-blue-500"
-      >
-        {products.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name} (Rs.{p.pricing ? p.pricing.tier25 : 0}/kg)
-          </option>
-        ))}
-      </select>
+                      <select
+                        value={item.productId}
+                        onChange={(e) => updateQuoteItem(idx, 'productId', e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-blue-500"
+                      >
+                        {products.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} (Rs.{p.pricing ? p.pricing.tier25 : 0}/kg)
+                          </option>
+                        ))}
+                      </select>
 
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <label className="block text-[10px] text-slate-400 mb-1">Can Size (kg)</label>
-          <select
-            value={isCustomSize ? 'CUSTOM' : item.packSize}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === 'CUSTOM') {
-                updateQuoteItem(idx, 'packSize', 10); // Default custom start
-              } else {
-                updateQuoteItem(idx, 'packSize', Number(val));
-              }
-            }}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
-          >
-            {prod.packSizes.map(sz => (
-              <option key={sz} value={sz}>{sz} kg Can</option>
-            ))}
-            <option value="CUSTOM">➕ Custom Size...</option>
-          </select>
-        </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 mb-1">Can Size (kg)</label>
+                          <select
+                            value={isCustomSize ? 'CUSTOM' : item.packSize}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'CUSTOM') {
+                                updateQuoteItem(idx, 'packSize', 10);
+                              } else {
+                                updateQuoteItem(idx, 'packSize', Number(val));
+                              }
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+                          >
+                            {prod.packSizes.map(sz => (
+                              <option key={sz} value={sz}>{sz} kg Can</option>
+                            ))}
+                            <option value="CUSTOM">➕ Custom Size...</option>
+                          </select>
+                        </div>
 
-        <div>
-          <label className="block text-[10px] text-slate-400 mb-1">Quantity of Cans</label>
-          <input
-            type="number"
-            min="1"
-            value={item.quantityPacks}
-            onChange={(e) => updateQuoteItem(idx, 'quantityPacks', Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-          />
-        </div>
-      </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 mb-1">Quantity of Cans</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantityPacks}
+                            onChange={(e) => updateQuoteItem(idx, 'quantityPacks', Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+                          />
+                        </div>
+                      </div>
 
-      {/* If Custom Size is selected, show an input box to type any number */}
-      {isCustomSize && (
-        <div className="pt-1">
-          <label className="block text-[10px] text-cyan-400 mb-1">Enter Custom Pack Size (kg)</label>
-          <input
-            type="number"
-            min="0.1"
-            step="0.5"
-            value={item.packSize}
-            onChange={(e) => updateQuoteItem(idx, 'packSize', Math.max(0.1, parseFloat(e.target.value) || 1))}
-            placeholder="e.g. 35"
-            className="w-full bg-slate-950 border border-cyan-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-          />
-        </div>
-      )}
-    </div>
-  );
-})}
-
+                      {isCustomSize && (
+                        <div className="pt-1">
+                          <label className="block text-[10px] text-cyan-400 mb-1">Enter Custom Pack Size (kg)</label>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.5"
+                            value={item.packSize}
+                            onChange={(e) => updateQuoteItem(idx, 'packSize', Math.max(0.1, parseFloat(e.target.value) || 1))}
+                            placeholder="e.g. 35"
+                            className="w-full bg-slate-950 border border-cyan-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -1643,26 +1689,36 @@ export default function App() {
                 <p className="text-xs text-slate-400">Live records synced from all connected staff devices in real-time</p>
               </div>
 
-              {transactions.length > 0 && (
+              <div className="flex items-center gap-2">
+                {/* Date Sort Toggle Button */}
                 <button
-                  onClick={() => {
-                    const headers = "ID,Date,Type,Product,Qty,Unit,Reference,Party,Amount,Notes\n";
-                    const rows = transactions.map(t => 
-                      '"' + t.id + '","' + t.date + '","' + t.type + '","' + t.productName + '","' + t.qty + '","' + t.unit + '","' + (t.refNumber || '') + '","' + (t.party || '') + '","' + (t.amount || 0) + '","' + (t.notes || '') + '"'
-                    ).join("\n");
-                    const blob = new Blob([headers + rows], { type: 'text/csv' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = "Khushali_Ledger_" + Date.now() + ".csv";
-                    a.click();
-                    showToast("Ledger CSV downloaded!");
-                  }}
-                  className="px-3.5 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg border border-slate-600 transition flex items-center gap-1.5 self-start sm:self-auto"
+                  onClick={() => setLedgerSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                  className="px-3 py-2 text-xs font-semibold bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700/60 rounded-lg transition flex items-center gap-1.5"
                 >
-                  <span>📥</span> Export CSV
+                  <span>🔄</span> Sort: {ledgerSortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
                 </button>
-              )}
+
+                {transactions.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const headers = "ID,Date,Type,Product,Qty,Unit,Reference,Party,Amount,Notes\n";
+                      const rows = sortedTransactions.map(t => 
+                        '"' + t.id + '","' + t.date + '","' + t.type + '","' + t.productName + '","' + t.qty + '","' + t.unit + '","' + (t.refNumber || '') + '","' + (t.party || '') + '","' + (t.amount || 0) + '","' + (t.notes || '') + '"'
+                      ).join("\n");
+                      const blob = new Blob([headers + rows], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = "Khushali_Ledger_" + Date.now() + ".csv";
+                      a.click();
+                      showToast("Ledger CSV downloaded!");
+                    }}
+                    className="px-3.5 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg border border-slate-600 transition flex items-center gap-1.5"
+                  >
+                    <span>📥</span> Export CSV
+                  </button>
+                )}
+              </div>
             </div>
 
             {transactions.length === 0 ? (
@@ -1680,10 +1736,11 @@ export default function App() {
                       <th className="py-3 px-3">Quantity</th>
                       <th className="py-3 px-3">Reference / Device</th>
                       <th className="py-3 px-3 text-right">Amount (Rs.)</th>
+                      <th className="py-3 px-3 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-mono">
-                    {transactions.map((tx) => {
+                    {sortedTransactions.map((tx) => {
                       const isPlus = tx.type === 'INWARD';
                       const isDilution = tx.type === 'PRODUCTION_DILUTION';
                       const isReset = tx.type === 'STOCK_RESET';
@@ -1713,6 +1770,15 @@ export default function App() {
                           </td>
                           <td className="py-3 px-3 text-right font-bold text-slate-200">
                             {tx.amount ? "Rs." + tx.amount.toLocaleString('en-IN') : '-'}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              onClick={() => handleDeleteTransaction(tx)}
+                              className="px-2.5 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-sans font-medium transition"
+                              title="Delete entry and reverse stock"
+                            >
+                              ❌ Undo
+                            </button>
                           </td>
                         </tr>
                       );
