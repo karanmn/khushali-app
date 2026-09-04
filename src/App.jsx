@@ -333,7 +333,7 @@ const DEFAULT_PRODUCTS = [
   }
 ];
 
-// --- PASTE YOUR FIREBASE KEYS HERE ---
+// --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
   apiKey: "AIzaSyD3pPGlB37Njyp7IVnV2a0k4ArRNJFZ9JY",
   authDomain: "khushali-a24f0.firebaseapp.com",
@@ -349,7 +349,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export default function App() {
-  // Login & Welcome State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
 
@@ -400,7 +399,6 @@ export default function App() {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  // 1. Authenticate immediately
   useEffect(() => {
     signInAnonymously(auth).catch((err) => {
       console.error("Auth error:", err);
@@ -416,7 +414,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 2. Direct Firestore Collection Listeners & Auto Stock Recovery from Ledger
   useEffect(() => {
     const productsRef = collection(db, 'products');
     const txRef = collection(db, 'transactions');
@@ -534,7 +531,6 @@ export default function App() {
     }
   };
 
-  // Individual Product Reset to 0 Functionality
   const handleResetProductStock = async (product) => {
     if (!window.confirm(`Are you sure you want to reset stock of ${product.name} to 0 kg?`)) {
       return;
@@ -546,11 +542,9 @@ export default function App() {
       return;
     }
 
-    // Set local stock to 0
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockKg: 0 } : p));
     await saveProductToCloud(product.id, { stockKg: 0 });
 
-    // Log reset transaction in ledger
     const resetTx = {
       id: "TX-RESET-" + product.id + "-" + Date.now().toString().slice(-4),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
@@ -1051,11 +1045,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
-              <img 
-    src="/src/IMG-20260814-WA0009.jpg" 
-    alt="Khushali Chemicals Logo" 
-    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-contain bg-slate-950 border border-blue-400/30 p-1"
-  />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/20 border border-blue-400/30">
+                KC
               </div>
               <div>
                 <div className="flex items-center gap-2">
