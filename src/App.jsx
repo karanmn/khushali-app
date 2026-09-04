@@ -349,6 +349,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export default function App() {
+  // Login & Welcome State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+
   const [syncStatus, setSyncStatus] = useState('Connecting to live database...');
   const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [cloudError, setCloudError] = useState(null);
@@ -464,8 +468,6 @@ export default function App() {
         });
         setTransactions(list);
 
-        // AUTO-RECOVER STOCK FROM TRANSACTIONS LEDGER IF PRODUCTS ARE ZERO
-        // This ensures historical ledger transactions automatically dictate the correct stock balance.
         const calculatedStocks = {};
         list.forEach(tx => {
           if (tx.productId && tx.qty) {
@@ -475,11 +477,12 @@ export default function App() {
               calculatedStocks[tx.productId] += qty;
             } else if (tx.type === 'DISPATCH') {
               calculatedStocks[tx.productId] -= qty;
+            } else if (tx.type === 'PRODUCT_RESET') {
+              calculatedStocks[tx.productId] = 0;
             }
           }
         });
 
-        // If transactions exist, update local stock view based on ledger history
         if (list.length > 0) {
           setProducts(prev => prev.map(p => {
             const calculated = calculatedStocks[p.id];
@@ -501,7 +504,6 @@ export default function App() {
     };
   }, []);
 
-  // Sorted Transactions
   const sortedTransactions = useMemo(() => {
     const list = [...transactions];
     list.sort((a, b) => {
@@ -532,7 +534,41 @@ export default function App() {
     }
   };
 
-  // Undo / Delete Transaction Functionality
+  // Individual Product Reset to 0 Functionality
+  const handleResetProductStock = async (product) => {
+    if (!window.confirm(`Are you sure you want to reset stock of ${product.name} to 0 kg?`)) {
+      return;
+    }
+
+    const currentStock = Number(product.stockKg) || 0;
+    if (currentStock <= 0) {
+      showToast(`${product.name} stock is already 0 kg.`);
+      return;
+    }
+
+    // Set local stock to 0
+    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockKg: 0 } : p));
+    await saveProductToCloud(product.id, { stockKg: 0 });
+
+    // Log reset transaction in ledger
+    const resetTx = {
+      id: "TX-RESET-" + product.id + "-" + Date.now().toString().slice(-4),
+      date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
+      type: 'PRODUCT_RESET',
+      productId: product.id,
+      productName: product.name,
+      qty: currentStock,
+      unit: product.unit || 'kg',
+      refNumber: 'RESET-0',
+      party: 'Admin Reset',
+      notes: `Reset ${product.name} stock from ${currentStock}kg to 0kg`,
+      amount: 0
+    };
+    await saveTransactionToCloud(resetTx);
+
+    showToast(`Reset ${product.name} stock to 0 kg successfully!`);
+  };
+
   const handleDeleteTransaction = async (tx) => {
     if (!window.confirm(`Are you sure you want to undo/delete transaction [${tx.id}]? This will reverse the stock change!`)) {
       return;
@@ -938,6 +974,64 @@ export default function App() {
     document.body.removeChild(textArea);
   };
 
+  // --- LOGIN SCREEN WITH WELCOME POPUP ---
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 shadow-2xl space-y-6 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400"></div>
+          
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center font-black text-white text-2xl shadow-lg shadow-blue-500/20 border border-blue-400/30">
+            KC
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-cyan-400 tracking-widest uppercase bg-cyan-950/80 px-3 py-1 rounded-full border border-cyan-800">
+              Welcome to Khushali Chemicals
+            </span>
+            <h2 className="text-2xl font-black text-white tracking-tight">
+              Inventory & Dilution Portal
+            </h2>
+            <p className="text-xs text-slate-400">
+              Enter your secure access code to manage inventory, live stock, and quotations.
+            </p>
+          </div>
+
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (loginPassword === '7568') {
+              setIsAuthenticated(true);
+              showToast("Welcome! Login successful.");
+            } else {
+              showToast("Incorrect password! Try 7568", "error");
+            }
+          }} className="space-y-4 pt-2">
+            <div>
+              <input
+                type="password"
+                placeholder="Enter Password (7568)"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-lg font-bold text-white tracking-widest focus:outline-none focus:border-blue-500 shadow-inner"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 transition active:scale-95 text-sm"
+            >
+              🔐 Enter Portal
+            </button>
+          </form>
+
+          <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-800">
+            Jaipur, Rajasthan • Secure Cloud Inventory System
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {notification && (
@@ -1035,7 +1129,7 @@ export default function App() {
               onClick={() => setConfirmResetModal(true)}
               className="text-[11px] text-rose-400 hover:text-rose-300 underline font-medium"
             >
-              Reset 15 SKUs to 0 kg
+              Reset All 15 SKUs to 0 kg
             </button>
           </div>
         </div>
@@ -1151,13 +1245,23 @@ export default function App() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => handleOpenEditPrice(p)}
-                          className="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium transition flex items-center gap-1"
-                          title="Click to edit prices & minimum stock threshold"
-                        >
-                          <span>✏️</span> Edit Rates
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {/* Individual Reset to 0 Button */}
+                          <button
+                            onClick={() => handleResetProductStock(p)}
+                            className="text-[10px] px-2 py-0.5 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded font-medium transition flex items-center gap-1"
+                            title="Reset this product stock to 0 kg"
+                          >
+                            <span>🔄</span> Reset 0
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditPrice(p)}
+                            className="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium transition flex items-center gap-1"
+                            title="Click to edit prices & minimum stock threshold"
+                          >
+                            <span>✏️</span> Edit Rates
+                          </button>
+                        </div>
                       </div>
 
                       <h3 className="text-base font-bold text-white tracking-tight mb-1">
@@ -1762,7 +1866,7 @@ export default function App() {
                     {sortedTransactions.map((tx) => {
                       const isPlus = tx.type === 'INWARD';
                       const isDilution = tx.type === 'PRODUCTION_DILUTION';
-                      const isReset = tx.type === 'STOCK_RESET';
+                      const isReset = tx.type === 'STOCK_RESET' || tx.type === 'PRODUCT_RESET';
 
                       return (
                         <tr key={tx.id} className="hover:bg-slate-900/40 transition">
