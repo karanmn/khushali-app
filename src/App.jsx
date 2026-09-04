@@ -360,7 +360,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [notification, setNotification] = useState(null);
 
-  // Ledger Sort State ('desc' = newest first, 'asc' = oldest first)
   const [ledgerSortOrder, setLedgerSortOrder] = useState('desc');
 
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -401,7 +400,7 @@ export default function App() {
   useEffect(() => {
     signInAnonymously(auth).catch((err) => {
       console.error("Auth error:", err);
-      setCloudError("Auth Error: " + err.message + " (Make sure Anonymous Auth is ON in Firebase)");
+      setCloudError("Auth Error: " + err.message);
     });
 
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -413,7 +412,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 2. Direct Firestore Collection Listeners
+  // 2. Direct Firestore Collection Listeners & Auto Stock Recovery from Ledger
   useEffect(() => {
     const productsRef = collection(db, 'products');
     const txRef = collection(db, 'transactions');
@@ -451,7 +450,7 @@ export default function App() {
       },
       (error) => {
         console.error("Firestore product error:", error);
-        setCloudError("Firestore Error: " + error.message + " (Check Database Rules in Firebase)");
+        setCloudError("Firestore Error: " + error.message);
         setSyncStatus('⚠️ Sync Error');
       }
     );
@@ -464,6 +463,32 @@ export default function App() {
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
         setTransactions(list);
+
+        // AUTO-RECOVER STOCK FROM TRANSACTIONS LEDGER IF PRODUCTS ARE ZERO
+        // This ensures historical ledger transactions automatically dictate the correct stock balance.
+        const calculatedStocks = {};
+        list.forEach(tx => {
+          if (tx.productId && tx.qty) {
+            if (!calculatedStocks[tx.productId]) calculatedStocks[tx.productId] = 0;
+            const qty = Number(tx.qty) || 0;
+            if (tx.type === 'INWARD' || tx.type === 'PRODUCTION_DILUTION') {
+              calculatedStocks[tx.productId] += qty;
+            } else if (tx.type === 'DISPATCH') {
+              calculatedStocks[tx.productId] -= qty;
+            }
+          }
+        });
+
+        // If transactions exist, update local stock view based on ledger history
+        if (list.length > 0) {
+          setProducts(prev => prev.map(p => {
+            const calculated = calculatedStocks[p.id];
+            if (calculated !== undefined) {
+              return { ...p, stockKg: Math.max(0, calculated) };
+            }
+            return p;
+          }));
+        }
       },
       (error) => {
         console.error("Firestore tx error:", error);
@@ -476,7 +501,7 @@ export default function App() {
     };
   }, []);
 
-  // Sorted Transactions based on ledgerSortOrder
+  // Sorted Transactions
   const sortedTransactions = useMemo(() => {
     const list = [...transactions];
     list.sort((a, b) => {
@@ -514,7 +539,6 @@ export default function App() {
     }
 
     try {
-      // 1. Reverse stock change if applicable
       if (tx.productId && tx.qty && tx.type) {
         const targetProd = products.find(p => p.id === tx.productId);
         if (targetProd) {
@@ -522,20 +546,16 @@ export default function App() {
           let newStock = currentStock;
 
           if (tx.type === 'INWARD' || tx.type === 'PRODUCTION_DILUTION') {
-            // If we added stock or mixed a batch, undoing means subtracting it back
             newStock = Math.max(0, currentStock - Number(tx.qty));
           } else if (tx.type === 'DISPATCH') {
-            // If we dispatched stock, undoing means adding it back
             newStock = currentStock + Number(tx.qty);
           }
 
-          // Update product stock locally and in cloud
           setProducts(prev => prev.map(p => p.id === targetProd.id ? { ...p, stockKg: newStock } : p));
           await saveProductToCloud(targetProd.id, { stockKg: newStock });
         }
       }
 
-      // 2. Delete transaction from Firestore
       await deleteDoc(doc(db, 'transactions', tx.id));
       showToast(`Transaction ${tx.id} deleted and stock adjusted successfully!`);
     } catch (err) {
@@ -1690,7 +1710,6 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Date Sort Toggle Button */}
                 <button
                   onClick={() => setLedgerSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                   className="px-3 py-2 text-xs font-semibold bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700/60 rounded-lg transition flex items-center gap-1.5"
