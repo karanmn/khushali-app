@@ -1051,8 +1051,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/20 border border-blue-400/30">
-                KC
+              <img 
+    src="/src/IMG-20260814-WA0009.jpg" 
+    alt="Khushali Chemicals Logo" 
+    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-contain bg-slate-950 border border-blue-400/30 p-1"
+  />
               </div>
               <div>
                 <div className="flex items-center gap-2">
