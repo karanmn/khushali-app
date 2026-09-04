@@ -1009,7 +1009,7 @@ export default function App() {
             <div>
               <input
                 type="password"
-                placeholder="Enter Password (7568)"
+                placeholder="Enter Password to Access"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-lg font-bold text-white tracking-widest focus:outline-none focus:border-blue-500 shadow-inner"
