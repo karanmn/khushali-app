@@ -414,6 +414,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // 2. Direct Firestore Collection Listeners & Real-time Ledger Calculation
   useEffect(() => {
     const productsRef = collection(db, 'products');
     const txRef = collection(db, 'transactions');
@@ -421,21 +422,13 @@ export default function App() {
     const unsubProducts = onSnapshot(
       productsRef,
       (snapshot) => {
-        if (snapshot.empty) {
-          DEFAULT_PRODUCTS.forEach(async (p) => {
-            try {
-              await setDoc(doc(db, 'products', p.id), p, { merge: true });
-            } catch (e) {
-              console.error("Init save error:", e);
-            }
-          });
-        } else {
+        if (!snapshot.empty) {
           const cloudMap = {};
           snapshot.forEach(docSnap => {
             cloudMap[docSnap.id] = docSnap.data();
           });
 
-          setProducts(DEFAULT_PRODUCTS.map(def => {
+          setProducts(prev => prev.map(def => {
             const remote = cloudMap[def.id];
             if (!remote) return def;
             return {
@@ -451,8 +444,6 @@ export default function App() {
       },
       (error) => {
         console.error("Firestore product error:", error);
-        setCloudError("Firestore Error: " + error.message);
-        setSyncStatus('⚠️ Sync Error');
       }
     );
 
@@ -465,6 +456,7 @@ export default function App() {
         });
         setTransactions(list);
 
+        // Calculate accurate stock directly from ledger transactions
         const calculatedStocks = {};
         list.forEach(tx => {
           if (tx.productId && tx.qty) {
@@ -480,15 +472,14 @@ export default function App() {
           }
         });
 
-        if (list.length > 0) {
-          setProducts(prev => prev.map(p => {
-            const calculated = calculatedStocks[p.id];
-            if (calculated !== undefined) {
-              return { ...p, stockKg: Math.max(0, calculated) };
-            }
-            return p;
-          }));
-        }
+        // Apply calculated stock to products immediately
+        setProducts(prev => prev.map(p => {
+          const calculated = calculatedStocks[p.id];
+          if (calculated !== undefined) {
+            return { ...p, stockKg: Math.max(0, calculated) };
+          }
+          return p;
+        }));
       },
       (error) => {
         console.error("Firestore tx error:", error);
@@ -542,9 +533,6 @@ export default function App() {
       return;
     }
 
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockKg: 0 } : p));
-    await saveProductToCloud(product.id, { stockKg: 0 });
-
     const resetTx = {
       id: "TX-RESET-" + product.id + "-" + Date.now().toString().slice(-4),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
@@ -559,7 +547,6 @@ export default function App() {
       amount: 0
     };
     await saveTransactionToCloud(resetTx);
-
     showToast(`Reset ${product.name} stock to 0 kg successfully!`);
   };
 
@@ -569,25 +556,8 @@ export default function App() {
     }
 
     try {
-      if (tx.productId && tx.qty && tx.type) {
-        const targetProd = products.find(p => p.id === tx.productId);
-        if (targetProd) {
-          let currentStock = Number(targetProd.stockKg) || 0;
-          let newStock = currentStock;
-
-          if (tx.type === 'INWARD' || tx.type === 'PRODUCTION_DILUTION') {
-            newStock = Math.max(0, currentStock - Number(tx.qty));
-          } else if (tx.type === 'DISPATCH') {
-            newStock = currentStock + Number(tx.qty);
-          }
-
-          setProducts(prev => prev.map(p => p.id === targetProd.id ? { ...p, stockKg: newStock } : p));
-          await saveProductToCloud(targetProd.id, { stockKg: newStock });
-        }
-      }
-
       await deleteDoc(doc(db, 'transactions', tx.id));
-      showToast(`Transaction ${tx.id} deleted and stock adjusted successfully!`);
+      showToast(`Transaction ${tx.id} deleted successfully!`);
     } catch (err) {
       console.error("Error deleting transaction:", err);
       showToast("Failed to delete transaction: " + err.message, "error");
@@ -713,12 +683,6 @@ export default function App() {
   };
 
   const handleQuickAdd = async (product, addAmount) => {
-    const current = Number(product.stockKg) || 0;
-    const newStock = current + addAmount;
-    
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockKg: newStock } : p));
-    await saveProductToCloud(product.id, { stockKg: newStock });
-
     const newTx = {
       id: "TX-" + Date.now().toString().slice(-5),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
@@ -733,8 +697,7 @@ export default function App() {
       amount: addAmount * (product.pricing.tier25 || product.pricing.tier5)
     };
     await saveTransactionToCloud(newTx);
-
-    showToast("Added +" + addAmount + "kg to " + product.name + "! Stock is now " + newStock + "kg");
+    showToast("Added +" + addAmount + "kg to " + product.name + "! Synced live.");
   };
 
   const handleStockUpdate = async (e) => {
@@ -753,12 +716,6 @@ export default function App() {
       showToast("Cannot dispatch " + qtyNum + "kg. Available stock is " + currentStock + "kg!", "error");
       return;
     }
-
-    const delta = quickStockModal.type === 'INWARD' ? qtyNum : -qtyNum;
-    const newStock = Math.max(0, currentStock + delta);
-
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockKg: newStock } : p));
-    await saveProductToCloud(product.id, { stockKg: newStock });
 
     const unitPrice = product.pricing[modalPriceTier] || product.pricing.tier25;
     const totalAmt = Math.round(qtyNum * unitPrice);
@@ -801,10 +758,6 @@ export default function App() {
       return;
     }
 
-    const newStock = currentStock - reqConc;
-    setProducts(prev => prev.map(p => p.id === selectedCalcProduct.id ? { ...p, stockKg: newStock } : p));
-    await saveProductToCloud(selectedCalcProduct.id, { stockKg: newStock });
-
     const newTx = {
       id: "TX-" + Date.now().toString().slice(-5),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
@@ -822,27 +775,18 @@ export default function App() {
   };
 
   const executeResetAllStock = async () => {
-    setProducts(prev => prev.map(p => ({ ...p, stockKg: 0 })));
-
-    DEFAULT_PRODUCTS.forEach(async (p) => {
-      try {
-        await setDoc(doc(db, 'products', p.id), { stockKg: 0 }, { merge: true });
-      } catch (err) {
-        console.error("Reset error:", err);
-      }
-    });
-
     const resetTx = {
-      id: "TX-RESET-" + Date.now().toString().slice(-4),
+      id: "TX-RESET-ALL-" + Date.now().toString().slice(-4),
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
-      type: 'STOCK_RESET',
+      type: 'PRODUCT_RESET',
       productId: 'ALL-15',
       productName: 'All 15 SKUs Initialized',
       qty: 0,
       unit: 'kg',
       refNumber: 'CLOUD-RESET',
       party: "Admin Device",
-      notes: 'All 15 product inventories reset to 0 kg across all devices'
+      notes: 'All 15 product inventories reset to 0 kg across all devices',
+      amount: 0
     };
     await saveTransactionToCloud(resetTx);
 
