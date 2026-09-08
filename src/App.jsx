@@ -414,7 +414,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 2. Direct Firestore Collection Listeners & Real-time Ledger Calculation
   useEffect(() => {
     const productsRef = collection(db, 'products');
     const txRef = collection(db, 'transactions');
@@ -456,7 +455,6 @@ export default function App() {
         });
         setTransactions(list);
 
-        // Calculate accurate stock directly from ledger transactions
         const calculatedStocks = {};
         list.forEach(tx => {
           if (tx.productId && tx.qty) {
@@ -472,13 +470,12 @@ export default function App() {
           }
         });
 
-        // Apply calculated stock to products immediately
         setProducts(prev => prev.map(p => {
           const calculated = calculatedStocks[p.id];
           if (calculated !== undefined) {
             return { ...p, stockKg: Math.max(0, calculated) };
           }
-          return p;
+          return { ...p, stockKg: 0 };
         }));
       },
       (error) => {
@@ -520,34 +517,6 @@ export default function App() {
     } catch (err) {
       console.error("Failed to save tx:", err);
     }
-  };
-
-  const handleResetProductStock = async (product) => {
-    if (!window.confirm(`Are you sure you want to reset stock of ${product.name} to 0 kg?`)) {
-      return;
-    }
-
-    const currentStock = Number(product.stockKg) || 0;
-    if (currentStock <= 0) {
-      showToast(`${product.name} stock is already 0 kg.`);
-      return;
-    }
-
-    const resetTx = {
-      id: "TX-RESET-" + product.id + "-" + Date.now().toString().slice(-4),
-      date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
-      type: 'PRODUCT_RESET',
-      productId: product.id,
-      productName: product.name,
-      qty: currentStock,
-      unit: product.unit || 'kg',
-      refNumber: 'RESET-0',
-      party: 'Admin Reset',
-      notes: `Reset ${product.name} stock from ${currentStock}kg to 0kg`,
-      amount: 0
-    };
-    await saveTransactionToCloud(resetTx);
-    showToast(`Reset ${product.name} stock to 0 kg successfully!`);
   };
 
   const handleDeleteTransaction = async (tx) => {
@@ -865,7 +834,8 @@ export default function App() {
 
     quoteCalculations.items.forEach((it, idx) => {
       lines.push((idx + 1) + ". *" + it.prodName + "*");
-      lines.push("   📦 " + it.quantityPacks + " Can(s) of " + it.packSize + "kg = " + it.totalKg + "kg @ Rs." + it.ratePerKg + "/kg");
+      // Updated to display total kg directly instead of cans count
+      lines.push("   📦 Total Quantity: " + it.totalKg + " kg @ Rs." + it.ratePerKg + "/kg");
       lines.push("   👉 *Total: Rs." + it.itemTotal.toLocaleString('en-IN') + "* (Yield: ~" + it.ratio + ")");
     });
 
@@ -1184,14 +1154,6 @@ export default function App() {
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          {/* Individual Reset to 0 Button */}
-                          <button
-                            onClick={() => handleResetProductStock(p)}
-                            className="text-[10px] px-2 py-0.5 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded font-medium transition flex items-center gap-1"
-                            title="Reset this product stock to 0 kg"
-                          >
-                            <span>🔄</span> Reset 0
-                          </button>
                           <button
                             onClick={() => handleOpenEditPrice(p)}
                             className="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium transition flex items-center gap-1"
@@ -1694,7 +1656,7 @@ export default function App() {
                       <div>
                         <div className="font-bold text-white">{it.prodName}</div>
                         <div className="text-[11px] text-slate-400">
-                          {it.quantityPacks} can(s) × {it.packSize}kg = <span className="text-cyan-300 font-semibold">{it.totalKg}kg</span> @ Rs.{it.ratePerKg}/kg
+                          Total Quantity: <span className="text-cyan-300 font-semibold">{it.totalKg} kg</span> @ Rs.{it.ratePerKg}/kg
                         </div>
                       </div>
                       <div className="text-right font-mono font-bold text-slate-200">
