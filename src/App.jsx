@@ -14,7 +14,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 
-// --- MASTER PRODUCTS WITH FRAGRANCE VARIANTS & CATALOG PRICING ---
+// --- 12 MASTER PRODUCTS (UNIFIED SKUs WITH ALL CATALOG FRAGRANCES) ---
 const DEFAULT_PRODUCTS = [
   {
     id: "KHU-001",
@@ -38,7 +38,7 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Standard Pine/Classic", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard", type: "Standard", stockKg: 0 }
     ]
   },
   {
@@ -95,7 +95,7 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Standard Tar/Phenolic", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard", type: "Standard", stockKg: 0 }
     ]
   },
   {
@@ -120,7 +120,7 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Thick Blue Acidic", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard Blue", type: "Standard", stockKg: 0 }
     ]
   },
   {
@@ -145,7 +145,7 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 15, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Standard Floral/Fresh", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard Red", type: "Standard", stockKg: 0 }
     ]
   },
   {
@@ -154,7 +154,7 @@ const DEFAULT_PRODUCTS = [
     category: "Surface Cleaners",
     minThresholdKg: 40,
     colorTheme: "#eab308",
-    colorName: "Citrus / Floral",
+    colorName: "Multi-Fragrance",
     pricing: { tier5: 145, tier25: 140, tier50: 135 },
     ratioLabel: "1:40 to 1:60",
     minRatio: 40,
@@ -182,7 +182,7 @@ const DEFAULT_PRODUCTS = [
     ]
   },
   {
-    id: "KHU-007",
+    id: "KHU-008",
     name: "Hand Wash Raw Material",
     category: "Personal Care",
     minThresholdKg: 30,
@@ -205,10 +205,10 @@ const DEFAULT_PRODUCTS = [
     variants: [
       { id: "ROSE", name: "Rose", type: "Standard", stockKg: 0 },
       { id: "LAVENDER", name: "Lavender", type: "Standard", stockKg: 0 },
-      { id: "DETTOL", name: "Dettol Type", type: "Standard", stockKg: 0 },
+      { id: "DETTOL", name: "Dettol", type: "Standard", stockKg: 0 },
       { id: "LEMON", name: "Lemon", type: "Additional (Min 25kg)", stockKg: 0 },
       { id: "GREEN_APPLE", name: "Green Apple", type: "Additional (Min 25kg)", stockKg: 0 },
-      { id: "LIFEBUOY", name: "Lifebuoy Type", type: "Additional (Min 25kg)", stockKg: 0 },
+      { id: "LIFEBUOY", name: "Lifebuoy", type: "Additional (Min 25kg)", stockKg: 0 },
       { id: "TULSI", name: "Tulsi", type: "Additional (Min 25kg)", stockKg: 0 },
       { id: "NEEM", name: "Neem", type: "Additional (Min 25kg)", stockKg: 0 },
       { id: "JASMINE", name: "Jasmine", type: "Additional (Min 25kg)", stockKg: 0 },
@@ -217,7 +217,7 @@ const DEFAULT_PRODUCTS = [
     ]
   },
   {
-    id: "KHU-008",
+    id: "KHU-010",
     name: "Dishwash Raw Material",
     category: "Kitchen Care",
     minThresholdKg: 35,
@@ -238,11 +238,11 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "LEMON", name: "Lemon Active", type: "Standard", stockKg: 0 }
+      { id: "LEMON", name: "Lemon", type: "Standard", stockKg: 0 }
     ]
   },
   {
-    id: "KHU-009",
+    id: "KHU-011",
     name: "Fabric Wash Raw Material",
     category: "Laundry Care",
     minThresholdKg: 25,
@@ -263,11 +263,11 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Fresh Aqua / Surf", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard", type: "Standard", stockKg: 0 }
     ]
   },
   {
-    id: "KHU-010",
+    id: "KHU-012",
     name: "Glass Cleaner Raw Material",
     category: "Surface Cleaners",
     minThresholdKg: 20,
@@ -288,11 +288,11 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Sparkle Blue", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard Blue", type: "Standard", stockKg: 0 }
     ]
   },
   {
-    id: "KHU-011",
+    id: "KHU-013",
     name: "Car Wash Raw Material",
     category: "Auto Care",
     minThresholdKg: 25,
@@ -313,11 +313,11 @@ const DEFAULT_PRODUCTS = [
     packSizes: [5, 25, 50],
     unit: "kg",
     variants: [
-      { id: "STD", name: "Snow Foam Wash", type: "Standard", stockKg: 0 }
+      { id: "STD", name: "Standard", type: "Standard", stockKg: 0 }
     ]
   },
   {
-    id: "KHU-012",
+    id: "KHU-014",
     name: "Room Freshener Raw Material",
     category: "Fragrance & Air",
     minThresholdKg: 10,
@@ -350,6 +350,13 @@ const DEFAULT_PRODUCTS = [
     ]
   }
 ];
+
+// Legacy SKU ID migration map so old cloud entries merge cleanly into unified SKUs
+const LEGACY_SKU_MIGRATION = {
+  "KHU-007": { targetProductId: "KHU-006", targetVariantId: "ROSE" },     // Old Floor Cleaner (Rose) -> Floor Cleaner (Rose)
+  "KHU-009": { targetProductId: "KHU-008", targetVariantId: "DETTOL" },   // Old Hand Wash (Dettol) -> Hand Wash (Dettol)
+  "KHU-015": { targetProductId: "KHU-014", targetVariantId: "LAVENDER" }  // Old Room Freshener (Lavender) -> Room Freshener (Lavender)
+};
 
 // --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
@@ -385,7 +392,7 @@ export default function App() {
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Track active selected variant pill on each product card
+  // Track active selected flavour pill on each product card
   const [selectedVariantsMap, setSelectedVariantsMap] = useState({});
 
   // --- LEDGER FILTERS & SORTING ---
@@ -472,6 +479,7 @@ export default function App() {
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
           cloudMap[docSnap.id] = data;
+          // Only load truly custom user-created SKUs (not legacy KHU-001..015)
           if (data.isCustom) {
             customList.push({ id: docSnap.id, ...data });
           }
@@ -483,22 +491,28 @@ export default function App() {
           const remote = cloudMap[def.id];
           if (!remote) return def;
           
-          // Merge variants safely
+          // Merge custom variants added in cloud without duplicating or losing master flavours
           let mergedVariants = [...def.variants];
           if (remote.variants && Array.isArray(remote.variants)) {
             remote.variants.forEach(rv => {
               const existingIdx = mergedVariants.findIndex(v => v.id === rv.id);
               if (existingIdx > -1) {
-                mergedVariants[existingIdx] = { ...mergedVariants[existingIdx], ...rv };
+                mergedVariants[existingIdx] = {
+                  ...mergedVariants[existingIdx],
+                  name: rv.name || mergedVariants[existingIdx].name,
+                  type: rv.type || mergedVariants[existingIdx].type
+                };
               } else {
                 mergedVariants.push(rv);
               }
             });
           }
 
+          // IMPORTANT: Keep canonical master name, category, and ratio from def
+          // Only sync pricing, minThresholdKg, and variants from cloud!
           return {
             ...def,
-            ...remote,
+            minThresholdKg: remote.minThresholdKg !== undefined ? remote.minThresholdKg : def.minThresholdKg,
             pricing: {
               ...def.pricing,
               ...(remote.pricing || {})
@@ -534,7 +548,7 @@ export default function App() {
     };
   }, []);
 
-  // Compute Live Variant-Level & Product-Level Stocks from Transactions
+  // Compute Live Flavour-Level & Product-Level Stocks from Transactions
   const products = useMemo(() => {
     const combined = [...baseProducts, ...customProducts];
 
@@ -550,21 +564,29 @@ export default function App() {
       }
 
       if (!tx.productId || tx.qty === undefined) return;
-      const pid = tx.productId;
+
+      let pid = tx.productId;
+      let vid = tx.variantId;
+
+      // Migrate legacy split SKUs (KHU-007, KHU-009, KHU-015) into unified SKUs
+      if (LEGACY_SKU_MIGRATION[pid]) {
+        vid = vid || LEGACY_SKU_MIGRATION[pid].targetVariantId;
+        pid = LEGACY_SKU_MIGRATION[pid].targetProductId;
+      }
+
       if (!stockLedgerMap[pid]) stockLedgerMap[pid] = {};
 
-      // Fallback to first variant if legacy tx had no variantId
       const prodObj = combined.find(p => p.id === pid);
       const defaultVarId = prodObj && prodObj.variants && prodObj.variants[0] ? prodObj.variants[0].id : 'STD';
-      const vid = tx.variantId || defaultVarId;
+      const finalVid = vid || defaultVarId;
 
-      if (!stockLedgerMap[pid][vid]) stockLedgerMap[pid][vid] = 0;
+      if (!stockLedgerMap[pid][finalVid]) stockLedgerMap[pid][finalVid] = 0;
       const qty = Number(tx.qty) || 0;
 
       if (tx.type === 'INWARD') {
-        stockLedgerMap[pid][vid] += qty;
+        stockLedgerMap[pid][finalVid] += qty;
       } else if (tx.type === 'DISPATCH' || tx.type === 'PRODUCTION_DILUTION') {
-        stockLedgerMap[pid][vid] -= qty;
+        stockLedgerMap[pid][finalVid] -= qty;
       }
     });
 
@@ -585,7 +607,7 @@ export default function App() {
     });
   }, [baseProducts, customProducts, transactions]);
 
-  // Update calculator ratio & variant when product changes
+  // Update calculator ratio & flavour when product changes
   useEffect(() => {
     const prod = products.find(p => p.id === calcProductId);
     if (prod) {
@@ -606,7 +628,11 @@ export default function App() {
 
     const list = transactions.filter(tx => {
       if (ledgerTypeFilter !== 'ALL' && tx.type !== ledgerTypeFilter) return false;
-      if (ledgerProductFilter !== 'ALL' && tx.productId !== ledgerProductFilter) return false;
+      
+      const mappedPid = LEGACY_SKU_MIGRATION[tx.productId]
+        ? LEGACY_SKU_MIGRATION[tx.productId].targetProductId
+        : tx.productId;
+      if (ledgerProductFilter !== 'ALL' && mappedPid !== ledgerProductFilter) return false;
       
       if (ledgerDateFilter !== 'ALL' && tx.timestamp) {
         const txDate = new Date(tx.timestamp);
@@ -734,7 +760,6 @@ export default function App() {
       concentrateKg = finishedLitres / activeRatio;
     }
 
-    // Adjust water proportionally if slider ratio changed
     const baseRatio = selectedCalcProduct.dilutionRatio || 1;
     const baseWaterPerKg = selectedCalcProduct.waterAmountPerKg || baseRatio;
     const effectiveWaterPerKg = baseRatio === activeRatio ? baseWaterPerKg : activeRatio;
@@ -809,7 +834,7 @@ export default function App() {
 
     const varId = newVariantName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
     if (product.variants.some(v => v.id === varId)) {
-      showToast("This fragrance already exists in this product!", "error");
+      showToast("This flavour already exists in this product!", "error");
       return;
     }
 
@@ -820,7 +845,7 @@ export default function App() {
 
     await saveProductToCloud(product.id, { variants: updatedVariants });
     setSelectedVariantsMap(prev => ({ ...prev, [product.id]: varId }));
-    showToast(`Added "${newVariantName.trim()}" fragrance to ${product.name}!`);
+    showToast(`Added "${newVariantName.trim()}" flavour to ${product.name}!`);
     setNewVariantName('');
     setAddVariantModal({ open: false, product: null });
   };
@@ -955,7 +980,6 @@ export default function App() {
     setModalPartyGst('');
     setModalNotes('');
 
-    // Open Delivery Challan automatically on Dispatch
     if (quickStockModal.type === 'DISPATCH') {
       setChallanModal({ open: true, tx: newTx });
     }
@@ -1013,7 +1037,7 @@ export default function App() {
   const sendLowStockWhatsApp = (product, variant) => {
     const msg = `*URGENT FACTORY REORDER - KHUSHALI CHEMICALS* ⚠️\n` +
       `Product: *${product.name}*\n` +
-      `Fragrance/Variant: *${variant.name}*\n` +
+      `Flavour/Variant: *${variant.name}*\n` +
       `Current Stock: *${variant.stockKg} kg* (Total SKU: ${product.stockKg} kg)\n` +
       `Min Threshold: ${product.minThresholdKg} kg\n` +
       `Please schedule next production batch.`;
@@ -1027,20 +1051,20 @@ export default function App() {
       date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
       type: 'PRODUCT_RESET',
       productId: 'ALL-SKUS',
-      productName: 'All Products & Variants Initialized',
+      productName: 'All Products & Flavours Initialized',
       variantId: 'ALL',
-      variantName: 'All Fragrances',
+      variantName: 'All Flavours',
       qty: 0,
       unit: 'kg',
       refNumber: 'CLOUD-RESET',
       party: "Admin Device",
-      notes: 'All product & fragrance inventories reset to 0 kg across all devices',
+      notes: 'All product & flavour inventories reset to 0 kg across all devices',
       amount: 0
     };
     await saveTransactionToCloud(resetTx);
 
     setConfirmResetModal(false);
-    showToast("All product & fragrance stocks reset to 0 kg!");
+    showToast("All product & flavour stocks reset to 0 kg!");
   };
 
   const copyShareLink = () => {
@@ -1190,10 +1214,10 @@ export default function App() {
         <div className="border-t border-slate-800/80 bg-slate-950/60 overflow-x-auto scrollbar-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-2 py-2">
             {[
-              { id: 'inventory', label: '📦 Fragrance-Wise Stock', badge: `${inventoryStats.totalProducts} SKUs • ${inventoryStats.totalVariantsCount} Fragrances` },
+              { id: 'inventory', label: '📦 Flavour-Wise Stock', badge: `${inventoryStats.totalProducts} SKUs • ${inventoryStats.totalVariantsCount} Flavours` },
               { id: 'calculator', label: '🧪 Batch Dilution Engine', badge: 'Interactive Ratios' },
               { id: 'ledger', label: '📋 Cloud Stock Ledger', badge: transactions.length },
-              { id: 'catalog', label: '📖 Master Catalog & Fragrances', badge: null }
+              { id: 'catalog', label: '📖 Master Catalog & Flavours', badge: null }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1244,7 +1268,7 @@ export default function App() {
               {inventoryStats.totalStockKg.toLocaleString()} <span className="text-xs font-normal text-slate-400">kg</span>
             </div>
             <div className="mt-1 text-[11px] text-cyan-400 font-medium">
-              Across {inventoryStats.totalVariantsCount} Fragrances
+              Across {inventoryStats.totalProducts} Unified SKUs
             </div>
           </div>
 
@@ -1291,7 +1315,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* TAB 1: FRAGRANCE-WISE LIVE INVENTORY */}
+        {/* TAB 1: FLAVOUR-WISE LIVE INVENTORY */}
         {activeTab === 'inventory' && (
           <div className="space-y-5">
             <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
@@ -1301,7 +1325,7 @@ export default function App() {
                 </span>
                 <input
                   type="text"
-                  placeholder="Search product or fragrance (e.g. Mogra, Dettol, Green Apple, Seven Wonder)..."
+                  placeholder="Search product or flavour (Room Freshener, Hand Wash, Floor Cleaner, Mogra, Dettol)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -1327,7 +1351,6 @@ export default function App() {
                 const minThresh = Number(p.minThresholdKg) || 20;
                 const isLowStock = totalStockKg < minThresh;
 
-                // Determine currently selected fragrance variant on this card
                 const activeVarId = selectedVariantsMap[p.id] || (p.variants && p.variants[0] ? p.variants[0].id : 'STD');
                 const activeVariant = (p.variants || []).find(v => v.id === activeVarId) || p.variants[0];
                 const activeVariantStock = activeVariant ? (activeVariant.stockKg || 0) : 0;
@@ -1347,6 +1370,9 @@ export default function App() {
                           />
                           <span className="text-[11px] font-mono font-bold text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
                             {p.id}
+                          </span>
+                          <span className="text-[10px] font-semibold text-cyan-300 bg-cyan-950/70 px-2 py-0.5 rounded border border-cyan-800/50">
+                            {p.category}
                           </span>
                           {isLowStock && (
                             <span className="text-[10px] font-bold text-rose-200 bg-rose-950/90 px-2 py-0.5 rounded border border-rose-700 animate-pulse">
@@ -1375,19 +1401,21 @@ export default function App() {
                         Ratio: <span className="font-semibold text-slate-200">{p.ratioLabel}</span> • Total SKU Stock: <span className="text-cyan-400 font-bold">{totalStockKg} kg</span>
                       </p>
 
-                      {/* FRAGRANCE VARIANT PILLS SELECTOR */}
+                      {/* FLAVOUR VARIANT PILLS SELECTOR */}
                       <div className="mb-3">
                         <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5">
-                          <span className="font-semibold uppercase tracking-wider">Select Fragrance ({p.variants.length}):</span>
+                          <span className="font-semibold uppercase tracking-wider">
+                            {p.variants.length > 1 ? `Flavours (${p.variants.length}) - Tap to check stock:` : 'Variant:'}
+                          </span>
                           <button
                             onClick={() => setAddVariantModal({ open: true, product: p })}
                             className="text-cyan-400 hover:text-cyan-300 font-bold"
                           >
-                            + Add Fragrance
+                            + Add Flavour
                           </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                           {p.variants.map(v => {
                             const isSelected = v.id === activeVariant.id;
                             const isAdditional = v.type && v.type.includes('25kg');
@@ -1402,7 +1430,7 @@ export default function App() {
                                   {v.stockKg}kg
                                 </span>
                                 {isAdditional && (
-                                  <span className="text-[9px] text-amber-300" title="Additional Fragrance: Min 25kg Order">★</span>
+                                  <span className="text-[9px] text-amber-300" title="Additional Flavour: Min 25kg Order">★</span>
                                 )}
                               </button>
                             );
@@ -1410,16 +1438,16 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* ACTIVE FRAGRANCE STOCK BOX */}
+                      {/* ACTIVE FLAVOUR STOCK BOX */}
                       <div className="bg-slate-900/95 p-3 rounded-xl border border-slate-800 mb-3">
                         <div className="flex items-center justify-between mb-1">
                           <div>
                             <div className="text-[11px] text-slate-400">
-                              Selected: <strong className="text-white">{activeVariant.name}</strong>
+                              Selected Flavour: <strong className="text-white">{activeVariant.name}</strong>
                             </div>
                             {activeVariant.type && activeVariant.type.includes('25kg') && (
                               <span className="text-[9px] text-amber-300 bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-800/50 inline-block mt-0.5">
-                                ★ Additional Fragrance (Min 25kg Order)
+                                ★ Additional Flavour (Min 25kg Order)
                               </span>
                             )}
                           </div>
@@ -1467,7 +1495,7 @@ export default function App() {
                             <div className="font-bold text-white">Rs.{p.pricing.tier5}</div>
                           </div>
                           <div className="bg-slate-900/90 py-1 rounded border border-slate-800">
-                            <div className="text-[9px] text-slate-400">25 kg</div>
+                            <div className="text-[9px] text-slate-400">{p.id === 'KHU-014' ? '10 kg' : '25 kg'}</div>
                             <div className="font-bold text-blue-300">Rs.{p.pricing.tier25}</div>
                           </div>
                           <div className="bg-slate-900/90 py-1 rounded border border-slate-800">
@@ -1528,7 +1556,7 @@ export default function App() {
                 <span className="text-2xl">🧪</span>
                 <div>
                   <h2 className="text-lg font-bold text-white">Batch Mixing Engine</h2>
-                  <p className="text-xs text-slate-400">Select product, fragrance & custom thickness ratio</p>
+                  <p className="text-xs text-slate-400">Select product, flavour & custom thickness ratio</p>
                 </div>
               </div>
 
@@ -1550,10 +1578,10 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* FRAGRANCE VARIANT DROPDOWN */}
+                {/* FLAVOUR VARIANT DROPDOWN */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    2. Select Fragrance / Variant
+                    2. Select Flavour / Variant
                   </label>
                   <select
                     value={calcVariantId}
@@ -1568,7 +1596,7 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* INTERACTIVE DILUTION RATIO SLIDER (WHEN RANGE EXISTS) */}
+                {/* INTERACTIVE DILUTION RATIO SLIDER */}
                 {selectedCalcProduct.minRatio !== selectedCalcProduct.maxRatio && (
                   <div className="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-800/50 space-y-2">
                     <div className="flex justify-between items-center text-xs">
@@ -1659,7 +1687,7 @@ export default function App() {
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     {[
                       { id: 'tier5', label: '5kg Rate', price: selectedCalcProduct.pricing.tier5 },
-                      { id: 'tier25', label: '25kg Rate', price: selectedCalcProduct.pricing.tier25 },
+                      { id: 'tier25', label: selectedCalcProduct.id === 'KHU-014' ? '10kg Rate' : '25kg Rate', price: selectedCalcProduct.pricing.tier25 },
                       { id: 'tier50', label: '50kg Rate', price: selectedCalcProduct.pricing.tier50 }
                     ].map(tier => (
                       <button
@@ -1835,7 +1863,7 @@ export default function App() {
                 {filteredTransactions.length > 0 && (
                   <button
                     onClick={() => {
-                      const headers = "ID,Date,Type,Product,Fragrance,Qty,Unit,Reference,Party,Amount,Notes\n";
+                      const headers = "ID,Date,Type,Product,Flavour,Qty,Unit,Reference,Party,Amount,Notes\n";
                       const rows = filteredTransactions.map(t => 
                         `"${t.id}","${t.date}","${t.type}","${t.productName}","${t.variantName || 'Standard'}","${t.qty}","${t.unit}","${t.refNumber || ''}","${t.party || ''}","${t.amount || 0}","${t.notes || ''}"`
                       ).join("\n");
@@ -1910,7 +1938,7 @@ export default function App() {
                     <tr>
                       <th className="py-3 px-3">Date / ID</th>
                       <th className="py-3 px-3">Type</th>
-                      <th className="py-3 px-3">Product & Fragrance</th>
+                      <th className="py-3 px-3">Product & Flavour</th>
                       <th className="py-3 px-3">Quantity</th>
                       <th className="py-3 px-3">Party / Notes</th>
                       <th className="py-3 px-3 text-right">Amount (Rs.)</th>
@@ -1986,34 +2014,34 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: MASTER CATALOG & FRAGRANCE DIRECTORY */}
+        {/* TAB 4: MASTER CATALOG & FLAVOUR DIRECTORY */}
         {activeTab === 'catalog' && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-2xl p-6 border border-blue-800/50 shadow-md">
               <div className="max-w-3xl">
                 <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded border border-cyan-800 mb-2 inline-block">
-                  Master Technical Manual & Fragrance Catalog
+                  Master Technical Manual & Flavour Catalog
                 </span>
                 <h2 className="text-xl font-black text-white mt-1">
                   Khushali Chemicals Official Formula Directory
                 </h2>
                 <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                  All rates include 18% GST. Standard fragrances are ready-to-dispatch; Additional fragrances require a minimum 25 kg order.
+                  All rates include 18% GST. Standard flavours are ready-to-dispatch; Additional flavours (marked ★) require a minimum 25 kg order.
                 </p>
               </div>
             </div>
 
             <div className="bg-slate-800/90 rounded-2xl p-5 border border-slate-700 shadow-md">
-              <h3 className="text-base font-bold text-white mb-4">Complete Price, Ratio & Fragrance Matrix</h3>
+              <h3 className="text-base font-bold text-white mb-4">Complete 12-Product Price, Ratio & Flavour Matrix</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-900/90 text-slate-400 font-semibold uppercase text-[10px] tracking-wider border-b border-slate-700">
                     <tr>
                       <th className="py-3 px-3"># SKU & Name</th>
-                      <th className="py-3 px-3">Available Fragrances</th>
+                      <th className="py-3 px-3">Available Flavours</th>
                       <th className="py-3 px-3">Ratio</th>
                       <th className="py-3 px-3">5kg</th>
-                      <th className="py-3 px-3">25kg</th>
+                      <th className="py-3 px-3">25kg / 10kg</th>
                       <th className="py-3 px-3">50kg</th>
                       <th className="py-3 px-3">Water / TDS</th>
                     </tr>
@@ -2061,24 +2089,24 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL: ADD NEW FRAGRANCE VARIANT TO PRODUCT */}
+      {/* MODAL: ADD NEW FLAVOUR VARIANT TO PRODUCT */}
       {addVariantModal.open && addVariantModal.product && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-base font-bold text-white">
-                🌸 Add New Fragrance Variant
+                🌸 Add New Flavour Variant
               </h3>
               <button onClick={() => setAddVariantModal({ open: false, product: null })} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             <div className="text-xs text-slate-400">
-              Adding fragrance under: <strong className="text-cyan-300">{addVariantModal.product.name}</strong>
+              Adding flavour under: <strong className="text-cyan-300">{addVariantModal.product.name}</strong>
             </div>
 
             <form onSubmit={handleAddNewVariant} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Fragrance Name</label>
+                <label className="block text-slate-300 font-semibold mb-1">Flavour Name</label>
                 <input
                   type="text"
                   required
@@ -2097,7 +2125,7 @@ export default function App() {
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 >
                   <option value="Standard">Standard (Ready Stock)</option>
-                  <option value="Additional (Min 25kg)">Additional Fragrance (Min 25kg Order)</option>
+                  <option value="Additional (Min 25kg)">Additional Flavour (Min 25kg Order)</option>
                 </select>
               </div>
 
@@ -2137,7 +2165,7 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Fragrances (comma separated)</label>
+                <label className="block text-slate-300 font-semibold mb-1">Flavours (comma separated)</label>
                 <input type="text" placeholder="e.g. Lemon, Rose, Lavender" value={newProdFragrances} onChange={(e) => setNewProdFragrances(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
               </div>
 
@@ -2170,7 +2198,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: INWARD / DISPATCH WITH FRAGRANCE SELECTION & GST CHALLAN */}
+      {/* MODAL: INWARD / DISPATCH WITH FLAVOUR SELECTION & GST CHALLAN */}
       {quickStockModal.open && quickStockModal.product && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -2194,7 +2222,7 @@ export default function App() {
             <form onSubmit={handleStockUpdate} className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
-                  Select Fragrance / Variant
+                  Select Flavour / Variant
                 </label>
                 <select
                   value={modalVariantId}
@@ -2231,7 +2259,7 @@ export default function App() {
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 >
                   <option value="tier5">5kg Rate (Rs.{quickStockModal.product.pricing.tier5}/kg)</option>
-                  <option value="tier25">25kg Rate (Rs.{quickStockModal.product.pricing.tier25}/kg)</option>
+                  <option value="tier25">{quickStockModal.product.id === 'KHU-014' ? '10kg' : '25kg'} Rate (Rs.{quickStockModal.product.pricing.tier25}/kg)</option>
                   <option value="tier50">50kg Rate (Rs.{quickStockModal.product.pricing.tier50}/kg)</option>
                 </select>
               </div>
@@ -2320,7 +2348,7 @@ export default function App() {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-300 text-slate-500 text-[10px] uppercase">
-                  <th className="py-1.5 text-left">Item & Fragrance</th>
+                  <th className="py-1.5 text-left">Item & Flavour</th>
                   <th className="py-1.5 text-right">Qty</th>
                   <th className="py-1.5 text-right">Total (Incl. GST)</th>
                 </tr>
@@ -2329,7 +2357,7 @@ export default function App() {
                 <tr className="border-b border-slate-200">
                   <td className="py-2">
                     <div className="font-bold text-slate-900">{challanModal.tx.productName}</div>
-                    <div className="text-[11px] text-slate-600">Fragrance: {challanModal.tx.variantName || 'Standard'}</div>
+                    <div className="text-[11px] text-slate-600">Flavour: {challanModal.tx.variantName || 'Standard'}</div>
                   </td>
                   <td className="py-2 text-right font-mono font-bold">{challanModal.tx.qty} kg</td>
                   <td className="py-2 text-right font-mono font-bold">Rs.{(challanModal.tx.amount || 0).toLocaleString('en-IN')}</td>
@@ -2409,7 +2437,7 @@ export default function App() {
                   <input type="number" step="1" required value={editTier5} onChange={(e) => setEditTier5(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white font-mono" />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">25kg Rate</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{editPriceModal.product.id === 'KHU-014' ? '10kg Rate' : '25kg Rate'}</label>
                   <input type="number" step="1" required value={editTier25} onChange={(e) => setEditTier25(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-blue-300 font-mono" />
                 </div>
                 <div>
@@ -2440,7 +2468,7 @@ export default function App() {
               <span>⚠️</span> Reset All Inventories to 0 kg?
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              This will reset all products & fragrance stocks to <strong className="text-white">0 kg</strong> across all connected devices.
+              This will reset all products & flavour stocks to <strong className="text-white">0 kg</strong> across all connected devices.
             </p>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setConfirmResetModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
